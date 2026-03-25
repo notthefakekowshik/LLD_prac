@@ -2,10 +2,16 @@ package com.lldprep.cache.storage;
 
 import com.lldprep.cache.exception.CacheFullException;
 import com.lldprep.cache.model.CacheEntry;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * ConcurrentHashMap-backed storage. Thread-safe for individual map operations.
+ * Capacity enforcement is handled here; eviction decisions are the policy's responsibility.
+ */
 public class HashMapStorage<K, V> implements Storage<K, V> {
+
     private final ConcurrentHashMap<K, CacheEntry<V>> storageMap;
     private final int capacity;
 
@@ -17,7 +23,7 @@ public class HashMapStorage<K, V> implements Storage<K, V> {
     @Override
     public void add(K key, CacheEntry<V> value) throws CacheFullException {
         if (storageMap.size() >= capacity && !storageMap.containsKey(key)) {
-            throw new CacheFullException("Cache is full at capacity " + capacity);
+            throw new CacheFullException("Cache is full. Capacity: " + capacity);
         }
         storageMap.put(key, value);
     }
@@ -39,6 +45,6 @@ public class HashMapStorage<K, V> implements Storage<K, V> {
 
     @Override
     public Set<K> getAllKeys() {
-        return storageMap.keySet();
+        return new HashSet<>(storageMap.keySet()); // snapshot to avoid CME during TTL scan
     }
 }
