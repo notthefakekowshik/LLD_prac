@@ -23,6 +23,8 @@ Every problem must follow this iterative design lifecycle:
 
 **How to think:** Ask yourself — *"What would make this system unusable if missing?"* Those are your functional requirements. Then ask *"What would make this system fail under load or change?"* — those are non-functional.
 
+- **CRITICAL AI INSTRUCTION - PRESERVE TRUST:** The user relies heavily on this repository and the AI agent for their interview prep. DO NOT take shortcuts. You MUST NOT declare a topic complete until every single important pattern, math proof, and design question is covered from standard lists. Leaving gaps violates the user's trust.
+
 ---
 
 ### Step 2: **I**dentify (Schema & Entities)
