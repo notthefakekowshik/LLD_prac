@@ -85,9 +85,9 @@ public class InterfacesDemo {
         System.out.println();
         
         // Create notifiers - all implement Notifier interface
-        Notifier email = new EmailNotifier("smtp.example.com", 587);
-        Notifier sms = new SMSNotifier("api-key-123", "Twilio");
-        Notifier push = new PushNotifier("fcm-server-key-456");
+        com.lldprep.foundations.oop.interfaces.good.Notifier email = new com.lldprep.foundations.oop.interfaces.good.EmailNotifier("smtp.example.com", 587);
+        com.lldprep.foundations.oop.interfaces.good.Notifier sms = new com.lldprep.foundations.oop.interfaces.good.SMSNotifier("api-key-123", "Twilio");
+        com.lldprep.foundations.oop.interfaces.good.Notifier push = new com.lldprep.foundations.oop.interfaces.good.PushNotifier("fcm-server-key-456");
         
         // OrderService accepts List<Notifier> - works with ANY Notifier implementation
         com.lldprep.foundations.oop.interfaces.good.OrderService goodService = 
@@ -108,14 +108,14 @@ public class InterfacesDemo {
         System.out.println("╚═══════════════════════════════════════════════════════════╝\n");
         
         System.out.println("Scenario 1: Email-only notifications (VIP customers)");
-        Notifier email = new EmailNotifier("smtp.example.com", 587);
+        com.lldprep.foundations.oop.interfaces.good.Notifier email = new com.lldprep.foundations.oop.interfaces.good.EmailNotifier("smtp.example.com", 587);
         com.lldprep.foundations.oop.interfaces.good.OrderService emailOnlyService = 
             new com.lldprep.foundations.oop.interfaces.good.OrderService(List.of(email));
         emailOnlyService.placeOrder("vip-user", "ORD-002", 499.99);
         
         System.out.println("Scenario 2: SMS + Push notifications (mobile app users)");
-        Notifier sms = new SMSNotifier("api-key-123", "Twilio");
-        Notifier push = new PushNotifier("fcm-server-key-456");
+        com.lldprep.foundations.oop.interfaces.good.Notifier sms = new com.lldprep.foundations.oop.interfaces.good.SMSNotifier("api-key-123", "Twilio");
+        com.lldprep.foundations.oop.interfaces.good.Notifier push = new com.lldprep.foundations.oop.interfaces.good.PushNotifier("fcm-server-key-456");
         com.lldprep.foundations.oop.interfaces.good.OrderService mobileService = 
             new com.lldprep.foundations.oop.interfaces.good.OrderService(List.of(sms, push));
         mobileService.placeOrder("mobile-user", "ORD-003", 29.99);
@@ -135,7 +135,7 @@ public class InterfacesDemo {
         
         System.out.println("Testing with MockNotifier (no real notifications sent):");
         
-        MockNotifier mockNotifier = new MockNotifier();
+        com.lldprep.foundations.oop.interfaces.good.MockNotifier mockNotifier = new com.lldprep.foundations.oop.interfaces.good.MockNotifier();
         com.lldprep.foundations.oop.interfaces.good.OrderService testService = 
             new com.lldprep.foundations.oop.interfaces.good.OrderService(List.of(mockNotifier));
         
@@ -167,8 +167,8 @@ public class InterfacesDemo {
         System.out.println("  - ZERO modifications to existing notifiers");
         System.out.println("  - Just pass SlackNotifier to OrderService constructor\n");
         
-        Notifier email = new EmailNotifier("smtp.example.com", 587);
-        Notifier slack = new SlackNotifier("https://hooks.slack.com/xyz", "#orders");
+        com.lldprep.foundations.oop.interfaces.good.Notifier email = new com.lldprep.foundations.oop.interfaces.good.EmailNotifier("smtp.example.com", 587);
+        com.lldprep.foundations.oop.interfaces.good.Notifier slack = new com.lldprep.foundations.oop.interfaces.good.SlackNotifier("https://hooks.slack.com/xyz", "#orders");
         
         com.lldprep.foundations.oop.interfaces.good.OrderService extendedService = 
             new com.lldprep.foundations.oop.interfaces.good.OrderService(List.of(email, slack));

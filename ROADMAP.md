@@ -46,7 +46,7 @@ sequenceDiagram
 
 ## Phase 2: Design Pattern Catalog (The Vocabulary)
 
-For each pattern: study the entry in `PATTERNS.md`, implement it in isolation (a small standalone class), then check it off. Use `PATTERNS_DECISION_TREE.md` to understand *when* to reach for it.
+> **⏸ DEFERRED (2026-04-07)** — Patterns will be learned on the go while building Phase 3 & 4 problems. All 13 items moved to `BACKLOG.md`. Revisit the backlog as patterns appear naturally in machine coding problems.
 
 ### 2.1 Creational Patterns
 - [ ] **Singleton** — Implement a thread-safe `ConfigManager` using double-checked locking.
@@ -79,9 +79,9 @@ For each pattern: study the entry in `PATTERNS.md`, implement it in isolation (a
 Each of these is a real-world system component. Apply the full D.I.C.E. workflow from `INSTRUCTIONS.md`.
 
 - [x] **In-Memory Cache** — LRU eviction policy via Strategy pattern. ✓ *Completed 2026-03-24*
-- [ ] **Custom Thread Pool** — Implement `Executor` with a task queue and fixed worker thread pool. No `java.util.concurrent.ThreadPoolExecutor` — build it from scratch.
+- [x] **Custom Thread Pool** — Implement `Executor` with a task queue and fixed worker thread pool. No `java.util.concurrent.ThreadPoolExecutor` — build it from scratch. ✓ *Completed 2026-04-07 (Builder, Strategy, Factory, State, Future/Callable, rejection policies, metrics)*
 - [x] **Rate Limiter** — Implement both Token Bucket and Leaky Bucket algorithms. Expose a `RateLimiter` interface; algorithms are strategies. ✓ *Completed 2026-03-28*
-- [ ] **Logging Framework** — Implement `Logger` with severity levels, multiple `Handler` types (Console, File), and `Formatter` types (Plain, JSON). Use Chain of Responsibility + Decorator.
+- [ ] **Logging Framework** ⬅ *NEXT* — Implement `Logger` with severity levels, multiple `Handler` types (Console, File), and `Formatter` types (Plain, JSON). Use Chain of Responsibility + Decorator.
 - [ ] **Task Scheduler** — Implement a cron-like scheduler that accepts tasks with delay/period and executes them on a thread pool.
 
 ---
