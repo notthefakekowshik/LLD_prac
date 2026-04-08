@@ -1,0 +1,26 @@
+1. Java Volatile keyword?
+   When one thread changes the value of a volatile variable, other threads will immediately see the updated value.
+   When we use volatile, it always reads the values from RAM but not from Thread local or cache.
+   Volatile data will never be cached.
+   Without volatile, threads can cache the value in a register or CPU cache and may not see updates made by other threads.
+
+2. Thread local
+    In Java, Thread-Local means that each thread has its own isolated copy of a variable.
+    Concept	Description
+    ThreadLocal	A way to give each thread its own copy of a variable
+    Shared?	❌ No — completely isolated between threads
+    Thread-safe?	✅ Yes — since each thread has its own copy
+    Real-world use	Session state, caches, user contexts, etc.
+
+3. Runnable vs. Callable:
+   Runnable: Its run() method is void and cannot throw checked exceptions. You use it when you don't need a task to return a result.
+   Callable<V>: Its call() method returns a value of type V and can throw exceptions.
+                This is what you use when your task needs to compute something and return it.
+4. Key Differences
+    Feature
+    Future
+     (Java 5)	CompletableFuture (Java 8)
+    Blocking	get() is blocking. You must wait for the result.	Non-blocking composition. You can chain actions (thenAccept, thenApply) that trigger when the result is ready.
+    Chaining	Not supported. You have to manage dependencies manually.	Rich API for chaining multiple async steps.
+    Exception Handling	cumbersome try-catch blocks around get().	Fluent exception handling with exceptionally() or handle().
+    Manual Completion	Cannot be manually completed.	Can be manually completed via complete() or completeExceptionally().
