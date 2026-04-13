@@ -145,7 +145,68 @@ Covered in depth in `executors/BlockingQueue_Theory.md`. Quick reference:
 
 ---
 
-## 6. Interview Q&A
+## 6. DelayQueue — Deep Dive
+
+A `DelayQueue` is an **unbounded blocking queue** where elements can only be taken once their delay has expired. Elements must implement the `Delayed` interface.
+
+### How it works
+
+- Backed by a **`PriorityQueue`** — elements are ordered by remaining delay (shortest first = head).
+- Uses a single `ReentrantLock` + a **leader-follower pattern**: only one thread (the "leader") does a timed wait for the head element's delay. Other threads wait indefinitely until signaled. This avoids thundering-herd wakeups.
+- `take()` blocks until the head element's delay expires.
+- `poll()` returns `null` immediately if nothing has expired.
+- `put()` never blocks (unbounded). If the new element has a shorter delay than the current head, the leader thread is woken up.
+
+### Delayed interface
+
+```java
+public interface Delayed extends Comparable<Delayed> {
+    long getDelay(TimeUnit unit); // remaining delay; ≤ 0 means expired
+}
+```
+
+You must implement both `getDelay()` and `compareTo()`. Store the **absolute expiry time** and compute the remaining delay dynamically:
+
+```java
+class Task implements Delayed {
+    private final long expiryTime;
+
+    Task(long delayMillis) {
+        this.expiryTime = System.currentTimeMillis() + delayMillis;
+    }
+
+    @Override
+    public long getDelay(TimeUnit unit) {
+        return unit.convert(expiryTime - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public int compareTo(Delayed o) {
+        return Long.compare(this.getDelay(TimeUnit.MILLISECONDS), o.getDelay(TimeUnit.MILLISECONDS));
+    }
+}
+```
+
+### When to use
+
+| Use Case | How |
+|---|---|
+| **Task scheduling** | `ScheduledThreadPoolExecutor` uses `DelayQueue` internally |
+| **Cache expiry** | Entries enqueued with TTL; reaper thread calls `take()` to evict |
+| **Session timeout** | Sessions enqueued on creation; expired sessions cleaned by consumer |
+| **Order cancellation** | Unpaid orders enqueued with 30-min delay; consumer cancels + releases inventory |
+| **Retry with backoff** | Failed items re-enqueued with increasing delay |
+
+### Key gotchas
+
+- **Unbounded** — no back-pressure. If producers are faster than delay expiry, memory grows indefinitely.
+- **Not fair** — elements with the same delay have no FIFO guarantee.
+- **No null elements.**
+- **Single lock** — under very high contention, throughput degrades. For extreme scale, consider a time-wheel (e.g., Netty's `HashedWheelTimer`).
+
+---
+
+## 7. Interview Q&A
 
 **Q: Why does `ConcurrentHashMap` not allow null keys?**
 A: `null` is used as an internal sentinel. When `get()` returns `null`, it could mean "key not found" or "key maps to null". In a single-threaded map you can disambiguate with `containsKey`, but in concurrent code that's a non-atomic check-then-act. By banning null, CHM avoids this ambiguity entirely.
