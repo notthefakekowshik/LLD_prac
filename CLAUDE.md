@@ -64,6 +64,11 @@ com.lldprep.<problem>/
     repository/   → In-memory data storage (Maps, Sets, Lists)
     exception/    → Custom checked/unchecked exceptions
     factory/      → Factory classes (if applicable)
+
+com.lldprep.foundations/
+    creational/   → All 5 creational patterns with good/bad examples ✅ COMPLETED
+    structural/   → 7 structural patterns (coming next)
+    behavioral/   → 7 behavioral patterns
 ```
 
 ---
@@ -101,8 +106,9 @@ com.lldprep.<problem>/
 - [ ] UML: Class Diagram + Sequence Diagram
 
 ### Phase 2: Design Patterns
-**Creational:** Singleton, Factory Method, Abstract Factory, Builder, Prototype
-**Structural:** Adapter, Bridge, Decorator, Facade, Flyweight, Proxy
+**Creational:** ✅ All 5 patterns completed with comprehensive good/bad examples
+  - Singleton (7 variations), Factory (3 types), Abstract Factory, Builder (4 variants), Prototype  
+**Structural:** Adapter, Bridge, Decorator, Facade, Flyweight, Proxy (next)
 **Behavioral:** Strategy, Observer, Command, State, Template Method, Iterator, Chain of Responsibility
 
 ### Phase 3: Building Blocks
@@ -152,3 +158,4 @@ com.lldprep.<problem>/
 - `ROADMAP.md` — Ordered learning path with completion tracking
 - `PATTERNS.md` — Design pattern catalog (consult before writing custom logic)
 - `PATTERNS_DECISION_TREE.md` — When to use which pattern
+- `QUICK_PATTERN_REFERENCE.md` — 2-minute pattern cheat sheet for interviews

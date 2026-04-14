@@ -1,4 +1,151 @@
-# Bloom Filter - Implementation Guide
+# Bloom Filter
+
+## Functional Requirements
+
+- User can **add** an element to the filter
+- User can **check membership** — returns "definitely not present" or "might be present"
+- User can **configure** expected element count and acceptable false positive rate
+- User can **delete** an element (Counting Bloom Filter variant — Curveball #1)
+- User can **reset** the filter (Counting Bloom Filter — Curveball #2)
+- User can **monitor** filter health: saturation, estimated FPR, element count (Curveball #3)
+
+## Non-Functional Requirements
+
+- Thread-safe: concurrent add and contains must not corrupt state
+- Mathematically sound: bit array size and hash count derived from FPR formula
+- O(k) add and contains (k = number of hash functions, typically small constant)
+- Pluggable hash functions without modifying the filter
+
+## Constraints
+
+- In-memory only
+- Probabilistic: false positives are possible, false negatives are not
+- Standard `BloomFilter` does not support deletion (use `CountingBloomFilter`)
+
+## Out of Scope
+
+- Scalable / dynamic-resize Bloom filters
+- Distributed Bloom filters
+- Persistent / serializable filters
+
+---
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class BloomFilter~T~ {
+        -BitSet bitArray
+        -HashFunction~T~ hashFunction
+        -int bitArraySize
+        -int numHashFunctions
+        -int expectedElements
+        -double falsePositiveRate
+        -ReadWriteLock lock
+        +add(T) void
+        +mightContain(T) boolean
+        +getExpectedElements() int
+        +getFalsePositiveRate() double
+        +getBitArraySize() int
+        +getNumHashFunctions() int
+        -getBitPosition(T, int) int
+    }
+
+    class BloomFilter_Builder~T~ {
+        +expectedElements(int) Builder~T~
+        +falsePositiveRate(double) Builder~T~
+        +hashFunction(HashFunction~T~) Builder~T~
+        +build() BloomFilter~T~
+        -calculateOptimalBitArraySize() int
+        -calculateOptimalHashCount() int
+    }
+
+    class CountingBloomFilter~T~ {
+        -int[] counters
+        -HashFunction~T~ hashFunction
+        -int arraySize
+        -int numHashFunctions
+        -int expectedElements
+        -double falsePositiveRate
+        -ReadWriteLock lock
+        -int elementCount
+        +add(T) void
+        +remove(T) void
+        +mightContain(T) boolean
+        +clear() void
+        +getElementCount() int
+        -getPosition(T, int) int
+    }
+
+    class CountingBloomFilter_Builder~T~ {
+        +expectedElements(int) Builder~T~
+        +falsePositiveRate(double) Builder~T~
+        +hashFunction(HashFunction~T~) Builder~T~
+        +build() CountingBloomFilter~T~
+        -calculateOptimalArraySize() int
+        -calculateOptimalHashCount() int
+    }
+
+    class BloomFilterMetrics~T~ {
+        -BloomFilter~T~ filter
+        +getSaturation() double
+        +estimateActualFalsePositiveRate(int) double
+        +estimateElementCount(int) int
+        +isApproachingSaturation(double) boolean
+        +getHealthReport(int) String
+        -estimateSaturationFromFPR() double
+    }
+
+    class HashFunction~T~ {
+        <<interface>>
+        +hash(T element, int seed) int
+    }
+
+    class SimpleHashFunction~T~ {
+        +hash(T element, int seed) int
+    }
+
+    class FNVHashFunction~T~ {
+        -int FNV_32_INIT
+        -int FNV_32_PRIME
+        +hash(T element, int seed) int
+        -fnv1a_32(byte[], int) int
+    }
+
+    class MurmurHashFunction~T~ {
+        -int MURMUR_SEED
+        +hash(T element, int seed) int
+        -murmur3_32(byte[], int) int
+    }
+
+    class BloomFilterException {
+        +BloomFilterException(String)
+        +BloomFilterException(String, Throwable)
+    }
+
+    BloomFilter~T~ "1" *-- "1" BloomFilter_Builder~T~ : inner class
+    CountingBloomFilter~T~ "1" *-- "1" CountingBloomFilter_Builder~T~ : inner class
+    BloomFilter~T~ "1" *-- "1" HashFunction~T~ : composition (Strategy)
+    CountingBloomFilter~T~ "1" *-- "1" HashFunction~T~ : composition (Strategy)
+    BloomFilterMetrics~T~ "1" *-- "1" BloomFilter~T~ : composition
+    HashFunction~T~ <|.. SimpleHashFunction~T~ : realization
+    HashFunction~T~ <|.. FNVHashFunction~T~ : realization
+    HashFunction~T~ <|.. MurmurHashFunction~T~ : realization
+    CountingBloomFilter~T~ ..> BloomFilterException : throws
+```
+
+---
+
+## Core Formulas
+
+| Parameter | Formula |
+|---|---|
+| Optimal bit array size (m) | `m = -(n × ln p) / (ln 2)²` |
+| Optimal hash function count (k) | `k = (m / n) × ln 2` |
+
+Where `n` = expected elements, `p` = target false positive rate.
+
+---
 
 ## Overview
 

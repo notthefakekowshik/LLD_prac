@@ -46,16 +46,16 @@ sequenceDiagram
 
 ## Phase 2: Design Pattern Catalog (The Vocabulary)
 
-> **⏸ DEFERRED (2026-04-07)** — Patterns will be learned on the go while building Phase 3 & 4 problems. All 13 items moved to `BACKLOG.md`. Revisit the backlog as patterns appear naturally in machine coding problems.
+> **✅ CREATIONAL PATTERNS COMPLETED (2026-04-14)** — All 5 creational patterns implemented with comprehensive good/bad examples. Located in `core-lld/src/main/java/com/lldprep/foundations/creational/`.
 
-### 2.1 Creational Patterns
-- [ ] **Singleton** — Implement a thread-safe `ConfigManager` using double-checked locking.
-- [ ] **Factory Method** — Implement a `NotificationFactory` that creates `EmailNotification`, `SMSNotification`, or `PushNotification` based on a type enum.
-- [ ] **Abstract Factory** — Implement a `DatabaseFactory` that creates paired `Connection` + `QueryBuilder` for either MySQL or PostgreSQL — can swap the entire family with one line.
-- [ ] **Builder** — Implement an immutable `HttpRequest` with required (url, method) and optional (headers, body, timeout) fields.
-- [ ] **Prototype** — Implement a `GamePieceRegistry` that stores prototype chess pieces and clones them on demand.
+### 2.1 Creational Patterns ✅ **COMPLETED**
+- [x] **Singleton** — 7 implementations: Eager, DCL, Bill Pugh (recommended), Enum (most robust), Thread-Local, Registry, Fully Protected. All with reflection/serialization protection.
+- [x] **Factory** — Simple Static Factory, Factory Method, Dynamic Registry with runtime registration.
+- [x] **Abstract Factory** — Cross-platform UI factory (Windows/Mac) with guaranteed family consistency.
+- [x] **Builder** — Basic Builder, Validation Builder, Hierarchical Builder with inheritance, Director for common configurations.
+- [x] **Prototype** — Shallow/Deep copy examples, Prototype Registry pattern, proper clone() implementation.
 
-### 2.2 Structural Patterns
+### 2.2 Structural Patterns ⏳ **NEXT**
 - [ ] **Adapter** — Adapt a `LegacyXMLParser` (returns `org.w3c.dom.Document`) to your `DataParser` interface (returns `Map<String, Object>`).
 - [ ] **Bridge** — Implement `Message` (SimpleMessage / UrgentMessage) × `MessageSender` (Email / SMS) — 2 × 2 combinations with no class explosion.
 - [ ] **Decorator** — Implement a `Logger` and stack decorators: `TimestampDecorator` + `SeverityDecorator` + `ConsoleLogger`.

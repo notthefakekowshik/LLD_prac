@@ -86,7 +86,7 @@ EvictionPolicy policy = new LRUEvictionPolicy();
 Cache cache = new Cache(policy);
 ```
 
-**Apply relevant Design Patterns** — refer to `PATTERNS.md`. Document *why* in a comment, not just *what*.
+**Apply relevant Design Patterns** — refer to `PATTERNS.md` and see completed examples in `foundations/creational/`. Document *why* in a comment, not just *what*.
 
 **Ensure SOLID principles** — see Section 4 below.
 
@@ -164,6 +164,11 @@ com.lldprep.<problem>/
     repository/   → In-memory data storage (Maps, Sets, Lists)
     exception/    → Custom checked/unchecked exceptions
     factory/      → Factory classes (if applicable)
+
+com.lldprep.foundations/
+    creational/   → ✅ All 5 creational patterns (good/bad examples)
+    structural/   → 7 structural patterns (next)
+    behavioral/   → 7 behavioral patterns
 ```
 
 ### Concurrency

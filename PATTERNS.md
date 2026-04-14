@@ -1,7 +1,9 @@
 # Design Pattern Catalog
 
 For each pattern: the **problem it solves**, a **minimal Java skeleton**, **when to use it**, and **when NOT to use it**.
-Use `PATTERNS_DECISION_TREE.md` to quickly pick the right pattern. Check off each pattern after you implement it in a real problem.
+Use `PATTERNS_DECISION_TREE.md` to quickly pick the right pattern. 
+
+⭐ **IMPLEMENTED**: Full good/bad examples available in `core-lld/src/main/java/com/lldprep/foundations/creational/`
 
 ---
 
@@ -12,7 +14,7 @@ These patterns control *how objects are created*, decoupling the caller from the
 ---
 
 ### Singleton
-- [ ] Implemented
+- [x] **Implemented** ⭐ `foundations/creational/singleton/good/` - 7 variations with comprehensive demos
 
 **Problem:** You need exactly one instance of a class shared across the entire application (e.g., a config manager, connection pool, logger).
 
@@ -49,7 +51,7 @@ public class ConfigManager {
 ---
 
 ### Factory Method
-- [ ] Implemented
+- [x] **Implemented** ⭐ `foundations/creational/factory/good/` - Simple Factory, Factory Method, Dynamic Registry
 
 **Problem:** You need to create objects, but the exact type shouldn't be hardcoded in the calling code — let subclasses or a factory decide.
 
@@ -88,7 +90,7 @@ public class BikeFactory implements VehicleFactory {
 ---
 
 ### Abstract Factory
-- [ ] Implemented
+- [x] **Implemented** ⭐ `foundations/creational/abstractfactory/good/` - Cross-platform GUI with Windows/Mac families
 
 **Problem:** You need to create *families* of related objects that must be used together, without specifying their concrete classes.
 
@@ -125,7 +127,7 @@ public class LightThemeFactory implements UIFactory {
 ---
 
 ### Builder
-- [x] Implemented (TaskBuilder in Task Scheduler)
+- [x] **Implemented** ⭐ `foundations/creational/builder/good/` - Basic, Validation, Hierarchical, Director patterns
 
 **Problem:** Creating an object requires many parameters, some optional. Telescoping constructors become unreadable.
 
@@ -177,7 +179,7 @@ Pizza pizza = new Pizza.Builder("Large", "Thin").cheese().pepperoni().build();
 ---
 
 ### Prototype
-- [ ] Implemented
+- [x] **Implemented** ⭐ `foundations/creational/prototype/good/` - Shallow/Deep copy, Registry pattern
 
 **Problem:** Creating a new object from scratch is expensive (involves DB calls, heavy computation). Clone an existing object instead.
 
