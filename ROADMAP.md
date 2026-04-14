@@ -63,14 +63,14 @@ sequenceDiagram
 - [ ] **Flyweight** — Implement a `ForestRenderer` with 1,000 trees. Share the `TreeType` (name, color, texture) as a flyweight; keep position (x, y) as extrinsic state.
 - [ ] **Proxy** — Implement a `CachingImageProxy` that loads an image from disk only on first access, then serves from cache.
 
-### 2.3 Behavioral Patterns
-- [ ] **Strategy** — Implement a `Sorter` that accepts a `SortStrategy` (`BubbleSort`, `QuickSort`, `MergeSort`). Swappable at runtime.
-- [ ] **Observer** — Implement a `WeatherStation` that notifies `PhoneDisplay`, `TVDisplay`, and `Logger` when temperature changes.
-- [ ] **Command** — Implement a text editor with `TypeCommand`, `DeleteCommand`, and a history stack for undo/redo.
-- [ ] **State** — Implement a `TrafficLight` with states (Red/Yellow/Green) that transitions automatically and behaves differently per state.
-- [ ] **Template Method** — Implement a `DataMigration` skeleton with `readFromSource()`, `transformData()`, `writeToTarget()`. Implement `CSVtoJSON` and `XMLtoCSV` subclasses.
-- [ ] **Iterator** — Implement a `BinaryTree` with in-order, pre-order, and post-order iterators without exposing the tree's internal structure.
-- [ ] **Chain of Responsibility** — Implement a `LogHandler` chain: `DebugHandler → InfoHandler → WarnHandler → ErrorHandler`. Each handles its level and passes the rest up.
+### 2.3 Behavioral Patterns ✅ **COMPLETED**
+- [x] **Strategy** — `Sorter` with `BubbleSortStrategy`, `MergeSortStrategy`, runtime swap. `DiscountStrategy` as a real-world example.
+- [x] **Observer** — `WeatherStation` with `EventManager`, generic typed observers, subscribe/unsubscribe, multi-event support.
+- [x] **Command** — `TextEditor` with `TypeCommand`, `DeleteCommand`, full undo/redo stacks, `MacroCommand` (composite).
+- [x] **State** — `VendingMachine` with `IdleState`, `HasCoinState`, `DispensingState`, `OutOfStockState`. Auto-transitions.
+- [x] **Template Method** — `DataExporter` skeleton with `CSVExporter`, `JSONExporter`, `XMLExporter`. Abstract + hook methods.
+- [x] **Iterator** — `BinaryTree` with private `Node`, three traversal iterators, native `Iterable` for-each support.
+- [x] **Chain of Responsibility** — `LogHandler` chain: `ConsoleHandler` → `FileHandler` → `EmailAlertHandler`. Runtime reconfiguration.
 
 ---
 
