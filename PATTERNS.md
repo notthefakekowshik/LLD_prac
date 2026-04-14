@@ -125,7 +125,7 @@ public class LightThemeFactory implements UIFactory {
 ---
 
 ### Builder
-- [ ] Implemented
+- [x] Implemented (TaskBuilder in Task Scheduler)
 
 **Problem:** Creating an object requires many parameters, some optional. Telescoping constructors become unreadable.
 
@@ -228,7 +228,7 @@ These patterns describe how to *compose objects and classes* into larger structu
 ---
 
 ### Adapter
-- [ ] Implemented
+- [x] Implemented (DelayedTask adapter in Task Scheduler)
 
 **Problem:** Two interfaces are incompatible and can't be changed. You need a translator between them.
 
@@ -367,7 +367,7 @@ Logger logger = new TimestampDecorator(new PrefixDecorator(new ConsoleLogger(), 
 ---
 
 ### Facade
-- [ ] Implemented
+- [x] Implemented (DelayQueueScheduler facade over concurrent machinery)
 
 **Problem:** A subsystem has many complex components. Callers shouldn't need to know the internals — give them one simple entry point.
 
@@ -559,7 +559,7 @@ public class Cache<K, V> {
 ---
 
 ### Observer
-- [ ] Implemented
+- [ ] Implemented (consider adding to Task Scheduler for task lifecycle events)
 
 **Problem:** When one object changes state, multiple other objects need to be notified automatically, without tight coupling.
 

@@ -1,5 +1,9 @@
 package com.kowshik.collections;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
@@ -73,10 +77,64 @@ public class DelayQueueDemo {
         private final String value;
         private final long expiryTimeMillis; // absolute time when this entry expires
 
+        /**
+         * Creates a cache entry that expires after the specified TTL.
+         *
+         * @param ttlMillis time-to-live in milliseconds from now
+         */
         public CacheEntry(String key, String value, long ttlMillis) {
             this.key = key;
             this.value = value;
             this.expiryTimeMillis = System.currentTimeMillis() + ttlMillis;
+        }
+
+        /**
+         * Private constructor for factory methods.
+         */
+        private CacheEntry(String key, String value, long expiryTimeMillis, boolean unused) {
+            this.key = key;
+            this.value = value;
+            this.expiryTimeMillis = expiryTimeMillis;
+        }
+
+        /**
+         * Creates a cache entry that expires at the specified absolute time (epoch millis).
+         *
+         * @param expiryTimeMillis absolute time in milliseconds since epoch when this entry expires
+         */
+        public static CacheEntry expiresAt(String key, String value, long expiryTimeMillis) {
+            return new CacheEntry(key, value, expiryTimeMillis, true);
+        }
+
+        /**
+         * Creates a cache entry that expires at the specified wall-clock time today.
+         * Example: expiresAt("session-D", "user-4", LocalTime.of(10, 30, 0)) expires at 10:30:00 today.
+         *
+         * @param expiryTime the wall-clock time when this entry should expire
+         */
+        public static CacheEntry expiresAt(String key, String value, LocalTime expiryTime) {
+            ZonedDateTime now = ZonedDateTime.now(ZoneId.systemDefault());
+            ZonedDateTime expiryDateTime = now.with(expiryTime);
+
+            // If the time has already passed today, schedule for tomorrow
+            if (expiryDateTime.isBefore(now)) {
+                expiryDateTime = expiryDateTime.plusDays(1);
+            }
+
+            long expiryTimeMillis = expiryDateTime.toInstant().toEpochMilli();
+            return new CacheEntry(key, value, expiryTimeMillis, true);
+        }
+
+        /**
+         * Creates a cache entry that expires at the specified date and time.
+         * Example: expiresAt("session-E", "user-5", LocalDateTime.of(2025, 4, 15, 10, 30))
+         * expires on April 15, 2025 at 10:30:00.
+         *
+         * @param expiryDateTime the date and time when this entry should expire
+         */
+        public static CacheEntry expiresAt(String key, String value, LocalDateTime expiryDateTime) {
+            long expiryTimeMillis = expiryDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            return new CacheEntry(key, value, expiryTimeMillis, true);
         }
 
         /**
@@ -109,13 +167,29 @@ public class DelayQueueDemo {
         DelayQueue<CacheEntry> expiryQueue = new DelayQueue<>();
 
         // ───────────────────────────────────────────────────────────────
-        // Step 2: Add elements with different TTLs
+        // Step 2: Add elements with different TTLs or absolute expiry times
         // ───────────────────────────────────────────────────────────────
-        expiryQueue.put(new CacheEntry("session-A", "user-1", 2000));  // expires in 2s
-        expiryQueue.put(new CacheEntry("session-B", "user-2", 4000));  // expires in 4s
-        expiryQueue.put(new CacheEntry("session-C", "user-3", 6000));  // expires in 6s
 
-        System.out.println("Added 3 cache entries with TTLs: 2s, 4s, 6s");
+        // Using TTL (relative time) - expires in 2 seconds from now
+        expiryQueue.put(new CacheEntry("session-A", "user-1", 2000));
+
+        // Using TTL (relative time) - expires in 4 seconds from now
+        expiryQueue.put(new CacheEntry("session-B", "user-2", 4000));
+
+        // Using absolute expiry time - expires 6 seconds from now (epoch millis)
+        long futureTime = System.currentTimeMillis() + 6000;
+        expiryQueue.put(CacheEntry.expiresAt("session-C", "user-3", futureTime));
+
+        // Using wall-clock time - expires at 14:30:00 today (or tomorrow if already passed)
+        expiryQueue.put(CacheEntry.expiresAt("session-D", "user-4", LocalTime.of(14, 30, 0)));
+
+        // Using specific date and time - expires on 2025-04-15 at 10:30:00
+        expiryQueue.put(CacheEntry.expiresAt("session-E", "user-5", LocalDateTime.of(2025, 4, 15, 10, 30)));
+
+        System.out.println("Added 3 cache entries:");
+        System.out.println("  - session-A: TTL 2s (relative)");
+        System.out.println("  - session-B: TTL 4s (relative)");
+        System.out.println("  - session-C: expires at " + futureTime + " (absolute)");
         System.out.println("Queue size: " + expiryQueue.size());
         System.out.println();
 
