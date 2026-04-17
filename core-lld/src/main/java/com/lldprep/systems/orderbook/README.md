@@ -129,7 +129,7 @@ com.lldprep.orderbook/
 
 ---
 
-## Data Structure — Why `TreeMap<price, Deque<Order>>`
+## Data Structure — Why `NavigableMap<Double, Deque<Order>>`
 
 | Need | Structure | Reason |
 |---|---|---|

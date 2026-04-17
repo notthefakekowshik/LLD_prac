@@ -20,6 +20,14 @@ public class OrderBook {
     private final String symbol;
     private final TradeListener listener;
 
+    /**
+     * Bids organized by price (descending) and time (FIFO within price level).
+     * TreeMap chosen over PriorityQueue because:
+     * - O(log n) removal by price level (needed for order cancellations)
+     * - O(1) access to best bid via firstEntry()
+     * - Maintains sorted order across all price levels
+     * - PriorityQueue lacks efficient removal of arbitrary elements
+     */
     private final NavigableMap<Double, Deque<Order>> bids = new TreeMap<>(Collections.reverseOrder());
     private final NavigableMap<Double, Deque<Order>> asks = new TreeMap<>();
     private final Map<String, Order> allOrders = new HashMap<>();
