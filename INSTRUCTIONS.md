@@ -157,19 +157,22 @@ These are non-negotiable. Internalize them before writing any class.
 
 ### Package Structure
 ```
-com.lldprep.<problem>/
+com.lldprep.foundations/         → Design pattern catalog (good/bad examples)
+    creational/                   → ✅ All 5 creational patterns (completed 2026-04-14)
+    structural/                   → ✅ All 6 structural patterns (completed 2026-04-17)
+    behavioral/                   → ✅ All 7 behavioral patterns (completed 2026-04-14)
+
+com.lldprep.systems.<system>/    → Real system / machine coding problems
     model/        → POJOs, Entities, Enums
-    policy/       → Strategy/Policy interfaces and implementations
     service/      → Core business logic, orchestration
+    policy/       → Strategy/Policy interfaces and implementations
     repository/   → In-memory data storage (Maps, Sets, Lists)
     exception/    → Custom checked/unchecked exceptions
     factory/      → Factory classes (if applicable)
-
-com.lldprep.foundations/
-    creational/   → ✅ All 5 creational patterns (good/bad examples)
-    structural/   → 7 structural patterns (next)
-    behavioral/   → 7 behavioral patterns
+    demo/         → Main demo class
 ```
+
+> **Note on package declarations:** Directory structure lives under `systems/` for organisation, but Java package names remain `com.lldprep.<system>` (not `com.lldprep.systems.<system>`). Maven resolves by classpath, not folder path — this is intentional to avoid a mass rename.
 
 ### Concurrency
 - Use `synchronized`, `ReentrantLock`, or `Atomic*` variables where shared state is mutated.
@@ -211,6 +214,7 @@ Run through this before marking any problem as complete:
 - [ ] Thread-safety addressed where applicable.
 - [ ] Custom exceptions defined in `exception/`.
 - [ ] No `instanceof` chains — use polymorphism instead.
+- [ ] **No inline multi-statement blocks** — never put more than one statement on a line or collapse `if/else/while` bodies onto a single line. Every block must use braces `{}` and each statement must be on its own line. This repo is for interview preparation — code must be readable at a glance.
 
 **Demo**
 - [ ] Does the `Main` class cover all functional requirements?
@@ -231,6 +235,7 @@ Recognizing bad design is as important as knowing good design.
 | **Premature Abstraction** | Creating interfaces for everything before there's a second implementation | Wait until you have two concrete cases |
 | **Hard-coded Dependencies** | `new ConcreteClass()` inside a constructor or method | Constructor injection (DIP) |
 | **Catch-All Exception** | `catch (Exception e) { }` | Handle specific exceptions; never suppress silently |
+| **Inline Multi-Statement** | `if (x) { doA(); doB(); }` on one line | One statement per line, always use `{}` — code must be readable without squinting |
 
 ---
 

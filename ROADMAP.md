@@ -48,6 +48,8 @@ sequenceDiagram
 
 > **✅ CREATIONAL PATTERNS COMPLETED (2026-04-14)** — All 5 creational patterns implemented with comprehensive good/bad examples. Located in `core-lld/src/main/java/com/lldprep/foundations/creational/`.
 
+> **✅ STRUCTURAL PATTERNS COMPLETED (2026-04-17)** — All 6 structural patterns implemented with bad/good examples. Located in `core-lld/src/main/java/com/lldprep/foundations/structural/`.
+
 ### 2.1 Creational Patterns ✅ **COMPLETED**
 - [x] **Singleton** — 7 implementations: Eager, DCL, Bill Pugh (recommended), Enum (most robust), Thread-Local, Registry, Fully Protected. All with reflection/serialization protection.
 - [x] **Factory** — Simple Static Factory, Factory Method, Dynamic Registry with runtime registration.
@@ -55,13 +57,13 @@ sequenceDiagram
 - [x] **Builder** — Basic Builder, Validation Builder, Hierarchical Builder with inheritance, Director for common configurations.
 - [x] **Prototype** — Shallow/Deep copy examples, Prototype Registry pattern, proper clone() implementation.
 
-### 2.2 Structural Patterns ⏳ **NEXT**
-- [ ] **Adapter** — Adapt a `LegacyXMLParser` (returns `org.w3c.dom.Document`) to your `DataParser` interface (returns `Map<String, Object>`).
-- [ ] **Bridge** — Implement `Message` (SimpleMessage / UrgentMessage) × `MessageSender` (Email / SMS) — 2 × 2 combinations with no class explosion.
-- [ ] **Decorator** — Implement a `Logger` and stack decorators: `TimestampDecorator` + `SeverityDecorator` + `ConsoleLogger`.
-- [ ] **Facade** — Implement a `HomeTheaterFacade` that simplifies starting (`dvd.on()`, `amplifier.setVolume()`, `projector.on()`, ...) into one `watchMovie()` call.
-- [ ] **Flyweight** — Implement a `ForestRenderer` with 1,000 trees. Share the `TreeType` (name, color, texture) as a flyweight; keep position (x, y) as extrinsic state.
-- [ ] **Proxy** — Implement a `CachingImageProxy` that loads an image from disk only on first access, then serves from cache.
+### 2.2 Structural Patterns ✅ **COMPLETED**
+- [x] **Adapter** — `LegacyPaymentGateway` adapted to `PaymentProcessor` interface. Two adapters (Legacy + Stripe) show provider swap with zero client changes.
+- [x] **Bridge** — `Message` (Simple / Urgent) × `MessageSender` (Email / SMS / Slack) — 2+3 classes instead of 2×3=6. Runtime sender swap demonstrated.
+- [x] **Decorator** — `Beverage` + `Coffee`/`Espresso` bases + `MilkDecorator`/`SugarDecorator`/`VanillaDecorator`. Stacking, double add-on, and different base all shown.
+- [x] **Facade** — `HomeTheaterFacade` wraps Amplifier/DVDPlayer/Projector/Lights into `watchMovie()` / `endMovie()`. Direct subsystem access still works.
+- [x] **Flyweight** — `TreeType` (intrinsic: name/color/texture) shared via `TreeTypeFactory`. `Tree` stores only extrinsic (x,y). 1,000 trees → 3 flyweight objects.
+- [x] **Proxy** — `ImageProxy` wraps `RealImage`: lazy init (no disk I/O until `display()`), caching (second call reuses loaded image), never-displayed = zero I/O.
 
 ### 2.3 Behavioral Patterns ✅ **COMPLETED**
 - [x] **Strategy** — `Sorter` with `BubbleSortStrategy`, `MergeSortStrategy`, runtime swap. `DiscountStrategy` as a real-world example.
@@ -90,6 +92,7 @@ Each of these is a real-world system component. Apply the full D.I.C.E. workflow
 
 These are full interview-style problems. Target 90–120 minutes per problem following the time splits in `INSTRUCTIONS.md`. Each must have a `README.md` and a working `Main` demo class.
 
+- [x] **Order Book Engine** — Per-symbol SingleThreadExecutor for lock-free matching. Price-time priority via `TreeMap<price, Deque<Order>>`. LIMIT/MARKET orders, partial fills, cancellation, concurrent multi-symbol producers. ✓ *Completed 2026-04-17 (Thread Confinement, Strategy, Producer-Consumer, Facade)*
 - [ ] **Parking Lot System** — Multiple levels, multi-vehicle types (Car/Bike/Truck), EV charging spots, concurrent access.
 - [ ] **Movie Booking System (BookMyShow)** — Multiple cities/theaters/screens, seat selection, concurrent booking prevention.
 - [ ] **Splitwise** — Expense tracking, multiple split types (Equal/Exact/Percentage), balance simplification.
