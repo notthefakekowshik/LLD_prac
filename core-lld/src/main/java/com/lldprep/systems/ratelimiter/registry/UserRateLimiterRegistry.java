@@ -1,9 +1,9 @@
-package com.lldprep.ratelimiter.registry;
+package com.lldprep.systems.ratelimiter.registry;
 
-import com.lldprep.ratelimiter.AlgorithmType;
-import com.lldprep.ratelimiter.RateLimitConfig;
-import com.lldprep.ratelimiter.RateLimiter;
-import com.lldprep.ratelimiter.factory.RateLimiterFactory;
+import com.lldprep.systems.ratelimiter.AlgorithmType;
+import com.lldprep.systems.ratelimiter.RateLimitConfig;
+import com.lldprep.systems.ratelimiter.RateLimiter;
+import com.lldprep.systems.ratelimiter.factory.RateLimiterFactory;
 
 import java.util.concurrent.ConcurrentHashMap;
 

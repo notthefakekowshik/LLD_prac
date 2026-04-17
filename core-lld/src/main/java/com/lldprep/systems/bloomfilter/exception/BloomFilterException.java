@@ -1,4 +1,4 @@
-package com.lldprep.bloomfilter.exception;
+package com.lldprep.systems.bloomfilter.exception;
 
 public class BloomFilterException extends RuntimeException {
     

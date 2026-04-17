@@ -1,4 +1,4 @@
-package com.lldprep.bloomfilter.hash;
+package com.lldprep.systems.bloomfilter.hash;
 
 /**
  * Strategy Pattern: Interface for hash function implementations.

@@ -1,4 +1,4 @@
-package com.lldprep.bloomfilter;
+package com.lldprep.systems.bloomfilter;
 
 /**
  * Demonstrates curveball scenarios - extensibility without modifying existing code.

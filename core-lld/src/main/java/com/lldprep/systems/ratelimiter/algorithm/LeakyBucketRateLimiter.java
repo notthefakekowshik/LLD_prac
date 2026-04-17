@@ -1,8 +1,8 @@
-package com.lldprep.ratelimiter.algorithm;
+package com.lldprep.systems.ratelimiter.algorithm;
 
-import com.lldprep.ratelimiter.AlgorithmType;
-import com.lldprep.ratelimiter.RateLimitConfig;
-import com.lldprep.ratelimiter.RateLimiter;
+import com.lldprep.systems.ratelimiter.AlgorithmType;
+import com.lldprep.systems.ratelimiter.RateLimitConfig;
+import com.lldprep.systems.ratelimiter.RateLimiter;
 
 import java.util.LinkedList;
 import java.util.Queue;

@@ -1,4 +1,4 @@
-package com.lldprep.ratelimiter;
+package com.lldprep.systems.ratelimiter;
 
 /**
  * Enumeration of supported rate limiting algorithms.

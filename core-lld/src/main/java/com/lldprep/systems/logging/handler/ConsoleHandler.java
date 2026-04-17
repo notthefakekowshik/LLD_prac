@@ -1,8 +1,8 @@
-package com.lldprep.logging.handler;
+package com.lldprep.systems.logging.handler;
 
-import com.lldprep.logging.LogLevel;
-import com.lldprep.logging.formatter.Formatter;
-import com.lldprep.logging.model.LogRecord;
+import com.lldprep.systems.logging.LogLevel;
+import com.lldprep.systems.logging.formatter.Formatter;
+import com.lldprep.systems.logging.model.LogRecord;
 
 /**
  * Writes formatted log records to the console.

@@ -1,4 +1,4 @@
-package com.lldprep.threadpool;
+package com.lldprep.systems.threadpool;
 
 /**
  * Enumeration representing the lifecycle states of a thread pool.

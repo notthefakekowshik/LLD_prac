@@ -1,8 +1,8 @@
-package com.lldprep.cache;
+package com.lldprep.systems.cache;
 
-import com.lldprep.cache.policy.LFUEvictionPolicy;
-import com.lldprep.cache.policy.LRUEvictionPolicy;
-import com.lldprep.cache.storage.HashMapStorage;
+import com.lldprep.systems.cache.policy.LFUEvictionPolicy;
+import com.lldprep.systems.cache.policy.LRUEvictionPolicy;
+import com.lldprep.systems.cache.storage.HashMapStorage;
 
 /**
  * Demonstrates all functional requirements of the Cache:

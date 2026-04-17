@@ -1,4 +1,4 @@
-package com.lldprep.cache.policy;
+package com.lldprep.systems.cache.policy;
 
 /**
  * Strategy interface for cache eviction. Implement this to plug in any eviction algorithm

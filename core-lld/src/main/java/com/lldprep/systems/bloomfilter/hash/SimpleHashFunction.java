@@ -1,4 +1,4 @@
-package com.lldprep.bloomfilter.hash;
+package com.lldprep.systems.bloomfilter.hash;
 
 /**
  * Simple hash function based on Java's built-in hashCode().

@@ -1,4 +1,4 @@
-package com.lldprep.ratelimiter;
+package com.lldprep.systems.ratelimiter;
 
 import java.time.Duration;
 

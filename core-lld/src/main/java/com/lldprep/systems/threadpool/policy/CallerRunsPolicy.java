@@ -1,6 +1,6 @@
-package com.lldprep.threadpool.policy;
+package com.lldprep.systems.threadpool.policy;
 
-import com.lldprep.threadpool.CustomThreadPool;
+import com.lldprep.systems.threadpool.CustomThreadPool;
 
 /**
  * Rejection policy that executes the task in the caller's thread.

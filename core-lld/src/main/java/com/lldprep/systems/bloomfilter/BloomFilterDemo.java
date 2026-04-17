@@ -1,8 +1,8 @@
-package com.lldprep.bloomfilter;
+package com.lldprep.systems.bloomfilter;
 
-import com.lldprep.bloomfilter.hash.FNVHashFunction;
-import com.lldprep.bloomfilter.hash.MurmurHashFunction;
-import com.lldprep.bloomfilter.hash.SimpleHashFunction;
+import com.lldprep.systems.bloomfilter.hash.FNVHashFunction;
+import com.lldprep.systems.bloomfilter.hash.MurmurHashFunction;
+import com.lldprep.systems.bloomfilter.hash.SimpleHashFunction;
 
 /**
  * Demonstration of Bloom Filter functionality.

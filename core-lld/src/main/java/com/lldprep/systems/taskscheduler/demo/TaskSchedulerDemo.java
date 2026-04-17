@@ -1,6 +1,6 @@
-package com.lldprep.taskscheduler.demo;
+package com.lldprep.systems.taskscheduler.demo;
 
-import com.lldprep.taskscheduler.*;
+import com.lldprep.systems.taskscheduler.*;
 
 import java.time.Duration;
 import java.time.LocalDateTime;

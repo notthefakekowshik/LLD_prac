@@ -1,4 +1,4 @@
-package com.lldprep.threadpool;
+package com.lldprep.systems.threadpool;
 
 /**
  * Immutable snapshot of thread pool metrics for monitoring and debugging.

@@ -1,6 +1,6 @@
-package com.lldprep.logging.formatter;
+package com.lldprep.systems.logging.formatter;
 
-import com.lldprep.logging.model.LogRecord;
+import com.lldprep.systems.logging.model.LogRecord;
 
 /**
  * Strategy interface for converting a LogRecord into a printable string.

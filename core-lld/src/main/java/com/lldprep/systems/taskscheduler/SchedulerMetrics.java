@@ -1,4 +1,4 @@
-package com.lldprep.taskscheduler;
+package com.lldprep.systems.taskscheduler;
 
 /**
  * Immutable snapshot of scheduler performance metrics.

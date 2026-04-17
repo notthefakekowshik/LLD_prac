@@ -1,4 +1,4 @@
-package com.lldprep.orderbook.model;
+package com.lldprep.systems.orderbook.model;
 
 /**
  * Immutable record of a single fill event produced by the matching engine.

@@ -1,6 +1,6 @@
-package com.lldprep.threadpool;
+package com.lldprep.systems.threadpool;
 
-import com.lldprep.threadpool.future.CustomFuture;
+import com.lldprep.systems.threadpool.future.CustomFuture;
 
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -26,7 +26,7 @@ public interface CustomThreadPool {
      * Submits a Runnable task for execution.
      * 
      * @param task the runnable task
-     * @throws com.lldprep.threadpool.exception.RejectedExecutionException if task cannot be accepted
+     * @throws com.lldprep.systems.threadpool.exception.RejectedExecutionException if task cannot be accepted
      */
     void submit(Runnable task);
     
@@ -36,7 +36,7 @@ public interface CustomThreadPool {
      * @param <T> the type of the task's result
      * @param task the callable task
      * @return a Future representing pending completion of the task
-     * @throws com.lldprep.threadpool.exception.RejectedExecutionException if task cannot be accepted
+     * @throws com.lldprep.systems.threadpool.exception.RejectedExecutionException if task cannot be accepted
      */
     <T> CustomFuture<T> submit(Callable<T> task);
 

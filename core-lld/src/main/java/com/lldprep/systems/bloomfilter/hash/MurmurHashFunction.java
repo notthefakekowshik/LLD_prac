@@ -1,4 +1,4 @@
-package com.lldprep.bloomfilter.hash;
+package com.lldprep.systems.bloomfilter.hash;
 
 /**
  * MurmurHash implementation - high quality, non-cryptographic hash function.

@@ -1,9 +1,9 @@
-package com.lldprep.threadpool.demo;
+package com.lldprep.systems.threadpool.demo;
 
-import com.lldprep.threadpool.CustomThreadPool;
-import com.lldprep.threadpool.FixedThreadPool;
-import com.lldprep.threadpool.factory.DefaultThreadFactory;
-import com.lldprep.threadpool.future.CustomFuture;
+import com.lldprep.systems.threadpool.CustomThreadPool;
+import com.lldprep.systems.threadpool.FixedThreadPool;
+import com.lldprep.systems.threadpool.factory.DefaultThreadFactory;
+import com.lldprep.systems.threadpool.future.CustomFuture;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,7 +1,7 @@
-package com.lldprep.cache.storage;
+package com.lldprep.systems.cache.storage;
 
-import com.lldprep.cache.exception.CacheFullException;
-import com.lldprep.cache.model.CacheEntry;
+import com.lldprep.systems.cache.exception.CacheFullException;
+import com.lldprep.systems.cache.model.CacheEntry;
 import java.util.Set;
 
 /**

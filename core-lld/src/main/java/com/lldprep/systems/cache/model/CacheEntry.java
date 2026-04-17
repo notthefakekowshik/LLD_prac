@@ -1,4 +1,4 @@
-package com.lldprep.cache.model;
+package com.lldprep.systems.cache.model;
 
 import java.time.Instant;
 

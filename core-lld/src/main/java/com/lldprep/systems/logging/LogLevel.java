@@ -1,4 +1,4 @@
-package com.lldprep.logging;
+package com.lldprep.systems.logging;
 
 /**
  * Severity levels for log records, ordered from least to most severe.

@@ -1,4 +1,4 @@
-package com.lldprep.threadpool.exception;
+package com.lldprep.systems.threadpool.exception;
 
 public class RejectedExecutionException extends RuntimeException {
     

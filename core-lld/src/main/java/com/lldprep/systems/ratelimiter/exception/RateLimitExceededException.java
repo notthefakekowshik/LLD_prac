@@ -1,4 +1,4 @@
-package com.lldprep.ratelimiter.exception;
+package com.lldprep.systems.ratelimiter.exception;
 
 /**
  * Exception thrown when rate limit is exceeded.

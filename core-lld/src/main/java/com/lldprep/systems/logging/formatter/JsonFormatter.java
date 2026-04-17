@@ -1,6 +1,6 @@
-package com.lldprep.logging.formatter;
+package com.lldprep.systems.logging.formatter;
 
-import com.lldprep.logging.model.LogRecord;
+import com.lldprep.systems.logging.model.LogRecord;
 
 /**
  * Formats a LogRecord as a single-line JSON object.

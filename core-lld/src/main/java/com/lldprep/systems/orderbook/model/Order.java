@@ -1,4 +1,4 @@
-package com.lldprep.orderbook.model;
+package com.lldprep.systems.orderbook.model;
 
 import java.time.Instant;
 import java.util.UUID;

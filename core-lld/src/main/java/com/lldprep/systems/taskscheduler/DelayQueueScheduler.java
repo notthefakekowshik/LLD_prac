@@ -1,6 +1,6 @@
-package com.lldprep.taskscheduler;
+package com.lldprep.systems.taskscheduler;
 
-import com.lldprep.taskscheduler.exception.TaskSchedulerException;
+import com.lldprep.systems.taskscheduler.exception.TaskSchedulerException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;

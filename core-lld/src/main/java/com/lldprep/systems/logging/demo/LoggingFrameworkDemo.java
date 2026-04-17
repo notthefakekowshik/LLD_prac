@@ -1,14 +1,14 @@
-package com.lldprep.logging.demo;
+package com.lldprep.systems.logging.demo;
 
 import com.lldprep.foundations.oop.abstractvsinterface.CreditCardProcessor;
 import com.lldprep.foundations.oop.factory.bad.PaymentProcessor;
-import com.lldprep.logging.LogLevel;
-import com.lldprep.logging.Logger;
-import com.lldprep.logging.factory.LoggerFactory;
-import com.lldprep.logging.formatter.JsonFormatter;
-import com.lldprep.logging.formatter.PlainTextFormatter;
-import com.lldprep.logging.handler.ConsoleHandler;
-import com.lldprep.logging.handler.FileHandler;
+import com.lldprep.systems.logging.LogLevel;
+import com.lldprep.systems.logging.Logger;
+import com.lldprep.systems.logging.factory.LoggerFactory;
+import com.lldprep.systems.logging.formatter.JsonFormatter;
+import com.lldprep.systems.logging.formatter.PlainTextFormatter;
+import com.lldprep.systems.logging.handler.ConsoleHandler;
+import com.lldprep.systems.logging.handler.FileHandler;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -141,20 +141,20 @@ public class LoggingFrameworkDemo {
         Logger logger = new Logger("demo.CoR", LogLevel.DEBUG);
 
         ConsoleHandler errorHandler = new ConsoleHandler(LogLevel.ERROR, new PlainTextFormatter()) {
-            @Override protected void write(String formatted, com.lldprep.logging.model.LogRecord record) {
+            @Override protected void write(String formatted, com.lldprep.systems.logging.model.LogRecord record) {
                 System.out.println("[ErrorHandler] level=" + record.getLevel() + " >= ERROR? "
                     + record.getLevel().isAtLeast(LogLevel.ERROR) + " → SKIP, forward");
             }
         };
         ConsoleHandler warnHandler = new ConsoleHandler(LogLevel.WARN, new PlainTextFormatter()) {
-            @Override protected void write(String formatted, com.lldprep.logging.model.LogRecord record) {
+            @Override protected void write(String formatted, com.lldprep.systems.logging.model.LogRecord record) {
                 System.out.println("[WarnHandler]  level=" + record.getLevel() + " >= WARN?  "
                     + record.getLevel().isAtLeast(LogLevel.WARN) + " → PROCESS");
                 System.out.println("  Output: " + formatted);
             }
         };
         ConsoleHandler debugHandler = new ConsoleHandler(LogLevel.DEBUG, new PlainTextFormatter()) {
-            @Override protected void write(String formatted, com.lldprep.logging.model.LogRecord record) {
+            @Override protected void write(String formatted, com.lldprep.systems.logging.model.LogRecord record) {
                 System.out.println("[DebugHandler] level=" + record.getLevel() + " >= DEBUG? "
                     + record.getLevel().isAtLeast(LogLevel.DEBUG) + " → PROCESS");
             }

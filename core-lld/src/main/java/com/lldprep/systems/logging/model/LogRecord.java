@@ -1,6 +1,6 @@
-package com.lldprep.logging.model;
+package com.lldprep.systems.logging.model;
 
-import com.lldprep.logging.LogLevel;
+import com.lldprep.systems.logging.LogLevel;
 
 import java.time.Instant;
 

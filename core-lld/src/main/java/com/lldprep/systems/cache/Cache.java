@@ -1,9 +1,9 @@
-package com.lldprep.cache;
+package com.lldprep.systems.cache;
 
-import com.lldprep.cache.exception.CacheFullException;
-import com.lldprep.cache.model.CacheEntry;
-import com.lldprep.cache.policy.EvictionPolicy;
-import com.lldprep.cache.storage.Storage;
+import com.lldprep.systems.cache.exception.CacheFullException;
+import com.lldprep.systems.cache.model.CacheEntry;
+import com.lldprep.systems.cache.policy.EvictionPolicy;
+import com.lldprep.systems.cache.storage.Storage;
 
 import java.time.Instant;
 import java.util.ArrayList;

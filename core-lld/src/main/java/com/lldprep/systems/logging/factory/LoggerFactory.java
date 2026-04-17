@@ -1,7 +1,7 @@
-package com.lldprep.logging.factory;
+package com.lldprep.systems.logging.factory;
 
-import com.lldprep.logging.LogLevel;
-import com.lldprep.logging.Logger;
+import com.lldprep.systems.logging.LogLevel;
+import com.lldprep.systems.logging.Logger;
 
 import java.util.concurrent.ConcurrentHashMap;
 

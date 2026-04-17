@@ -1,6 +1,6 @@
-package com.lldprep.threadpool.policy;
+package com.lldprep.systems.threadpool.policy;
 
-import com.lldprep.threadpool.CustomThreadPool;
+import com.lldprep.systems.threadpool.CustomThreadPool;
 
 /**
  * Strategy Pattern: Interface for handling task rejection when queue is full.

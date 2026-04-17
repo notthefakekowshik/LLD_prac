@@ -1,8 +1,8 @@
-package com.lldprep.bloomfilter;
+package com.lldprep.systems.bloomfilter;
 
-import com.lldprep.bloomfilter.exception.BloomFilterException;
-import com.lldprep.bloomfilter.hash.HashFunction;
-import com.lldprep.bloomfilter.hash.MurmurHashFunction;
+import com.lldprep.systems.bloomfilter.exception.BloomFilterException;
+import com.lldprep.systems.bloomfilter.hash.HashFunction;
+import com.lldprep.systems.bloomfilter.hash.MurmurHashFunction;
 
 import java.util.BitSet;
 import java.util.concurrent.locks.ReadWriteLock;

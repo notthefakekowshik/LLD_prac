@@ -1,4 +1,4 @@
-package com.lldprep.logging.exception;
+package com.lldprep.systems.logging.exception;
 
 /**
  * Unchecked exception thrown when the logging framework encounters an

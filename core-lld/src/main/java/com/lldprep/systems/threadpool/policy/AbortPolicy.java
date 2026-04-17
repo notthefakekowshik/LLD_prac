@@ -1,7 +1,7 @@
-package com.lldprep.threadpool.policy;
+package com.lldprep.systems.threadpool.policy;
 
-import com.lldprep.threadpool.CustomThreadPool;
-import com.lldprep.threadpool.exception.RejectedExecutionException;
+import com.lldprep.systems.threadpool.CustomThreadPool;
+import com.lldprep.systems.threadpool.exception.RejectedExecutionException;
 
 /**
  * Rejection policy that throws RejectedExecutionException.

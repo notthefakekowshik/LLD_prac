@@ -1,7 +1,7 @@
-package com.lldprep.ratelimiter;
+package com.lldprep.systems.ratelimiter;
 
-import com.lldprep.ratelimiter.factory.RateLimiterFactory;
-import com.lldprep.ratelimiter.registry.UserRateLimiterRegistry;
+import com.lldprep.systems.ratelimiter.factory.RateLimiterFactory;
+import com.lldprep.systems.ratelimiter.registry.UserRateLimiterRegistry;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;

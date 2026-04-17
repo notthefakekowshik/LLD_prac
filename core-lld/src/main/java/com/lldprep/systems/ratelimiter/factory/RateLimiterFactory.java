@@ -1,9 +1,9 @@
-package com.lldprep.ratelimiter.factory;
+package com.lldprep.systems.ratelimiter.factory;
 
-import com.lldprep.ratelimiter.AlgorithmType;
-import com.lldprep.ratelimiter.RateLimitConfig;
-import com.lldprep.ratelimiter.RateLimiter;
-import com.lldprep.ratelimiter.algorithm.*;
+import com.lldprep.systems.ratelimiter.AlgorithmType;
+import com.lldprep.systems.ratelimiter.RateLimitConfig;
+import com.lldprep.systems.ratelimiter.RateLimiter;
+import com.lldprep.systems.ratelimiter.algorithm.*;
 
 /**
  * Factory Pattern: Creates RateLimiter instances based on algorithm type.

@@ -1,4 +1,4 @@
-package com.lldprep.threadpool;
+package com.lldprep.systems.threadpool;
 
 import java.util.concurrent.BlockingQueue;
 

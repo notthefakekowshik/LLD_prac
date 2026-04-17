@@ -1,4 +1,4 @@
-package com.lldprep.ratelimiter;
+package com.lldprep.systems.ratelimiter;
 
 /**
  * Strategy Pattern: Interface for rate limiting algorithms.

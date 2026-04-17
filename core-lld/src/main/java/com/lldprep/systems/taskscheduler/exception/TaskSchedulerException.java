@@ -1,4 +1,4 @@
-package com.lldprep.taskscheduler.exception;
+package com.lldprep.systems.taskscheduler.exception;
 
 /**
  * Base exception for task scheduler errors.

@@ -1,7 +1,7 @@
-package com.lldprep.logging.handler;
+package com.lldprep.systems.logging.handler;
 
-import com.lldprep.logging.LogLevel;
-import com.lldprep.logging.model.LogRecord;
+import com.lldprep.systems.logging.LogLevel;
+import com.lldprep.systems.logging.model.LogRecord;
 
 /**
  * Contract for every node in the logging handler chain.

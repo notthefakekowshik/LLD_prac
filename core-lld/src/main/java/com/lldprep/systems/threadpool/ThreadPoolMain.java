@@ -1,7 +1,7 @@
-package com.lldprep.threadpool;
+package com.lldprep.systems.threadpool;
 
-import com.lldprep.threadpool.factory.DefaultThreadFactory;
-import com.lldprep.threadpool.policy.AbortPolicy;
+import com.lldprep.systems.threadpool.factory.DefaultThreadFactory;
+import com.lldprep.systems.threadpool.policy.AbortPolicy;
 
 import java.util.concurrent.TimeUnit;
 

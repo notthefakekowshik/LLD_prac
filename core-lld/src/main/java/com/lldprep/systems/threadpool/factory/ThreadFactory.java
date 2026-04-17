@@ -1,4 +1,4 @@
-package com.lldprep.threadpool.factory;
+package com.lldprep.systems.threadpool.factory;
 
 /**
  * Factory Pattern: Interface for creating and configuring threads.

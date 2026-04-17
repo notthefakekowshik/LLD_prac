@@ -1,7 +1,7 @@
-package com.lldprep.logging;
+package com.lldprep.systems.logging;
 
-import com.lldprep.logging.handler.Handler;
-import com.lldprep.logging.model.LogRecord;
+import com.lldprep.systems.logging.handler.Handler;
+import com.lldprep.systems.logging.model.LogRecord;
 
 import java.util.ArrayList;
 import java.util.List;
