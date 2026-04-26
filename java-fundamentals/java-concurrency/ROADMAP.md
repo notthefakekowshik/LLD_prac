@@ -20,6 +20,24 @@ Complete phases in order. Each phase builds on the previous one.
 | Phase 4.3 — LeetCode Concurrency | ⬜ Not started |
 | Phase 5 — GC | ✅ Complete |
 
+---
+
+## Session Log
+
+### 2026-04-26
+**Theory gaps filled:**
+- `Executors_Theory.md` — rewrote all 6 OOTB pool entries with full detail (production warnings, internals, best-for guidance); added `newVirtualThreadPerTaskExecutor` (Java 21) as 6th pool; added `scheduleAtFixedRate` vs `scheduleWithFixedDelay` comparison table; added work-stealing algorithm diagram; added daemon thread explanation for `WorkStealingPool`; added full OOTB comparison table; added Interview Q&A section (8 questions); added Demo Files Reference section (Section 8)
+
+**New demo files created:**
+- `executors/FixedThreadPoolDemo.java` — queue backlog proof, thread reuse across batches, bounded production-safe variant
+- `executors/CachedThreadPoolDemo.java` — elasticity, thread reuse between waves, OOM risk, bounded safe alternative, live thread-count drain with background monitor
+- `executors/SingleThreadExecutorDemo.java` — sequential ordering, thread resurrection after crash, proxy cast protection vs `newFixedThreadPool(1)`, serialized log writer
+- `executors/ScheduledThreadPoolDemo.java` — one-shot delay, fixed-rate, fixed-delay, slow-task rate vs delay comparison, silent suppression + fix
+- `executors/WorkStealingPoolDemo.java` — throughput vs fixed pool, divide-and-conquer parallel sum, daemon thread proof, uneven work stealing
+- `executors/VirtualThreadExecutorDemo.java` — 10k tasks in ~100ms, I/O throughput comparison, isVirtual/isDaemon, carrier pinning `synchronized` vs `ReentrantLock`
+
+---
+
 **Extra files added (beyond roadmap):**
 - `locks/Locks_DeepDive.md` — intrinsic/extrinsic tree, `synchronized` vs `Condition`, pessimistic/optimistic locking
 - `locks/SemaphoreVsMutexDemo.java` — `Semaphore(1)` ownership bug vs `ReentrantLock`
