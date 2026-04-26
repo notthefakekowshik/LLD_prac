@@ -1,11 +1,13 @@
 package com.kowshik.threads;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 /**
  * CallableVsRunnableDemo — Key Differences Between Runnable and Callable
@@ -33,6 +35,16 @@ import java.util.concurrent.FutureTask;
  * Q: What happens when a Callable throws an exception?
  * A: The exception is wrapped inside ExecutionException and re-thrown
  *    when you call future.get(). Unwrap via e.getCause().
+ *
+ * Q: What's the difference between Future and CompletableFuture?
+ * A:
+ *   | Feature              | Future<V>             | CompletableFuture<V>     |
+ *   |----------------------|-----------------------|--------------------------|
+ *   | Blocking             | Yes (get() blocks)    | Non-blocking (callbacks) |
+ *   | Chaining             | No                    | Yes (thenApply, thenCompose, etc.) |
+ *   | Manual completion    | No                    | Yes (complete(), completeExceptionally()) |
+ *   | Combining futures    | No                    | Yes (thenCombine, allOf, anyOf) |
+ *   | Exception handling   | try-catch on get()    | exceptionally(), handle() |
  */
 public class CallableVsRunnableDemo {
 
@@ -140,6 +152,97 @@ public class CallableVsRunnableDemo {
             System.err.println("[Main] FutureTask failed: " + e.getCause().getMessage());
         }
 
+        System.out.println("\n=== 5. CompletableFuture — Non-blocking async operations ===");
+        
+        // 5a. Simple async computation
+        CompletableFuture<Integer> cf1 = CompletableFuture.supplyAsync(() -> {
+            System.out.println("[CompletableFuture] " + Thread.currentThread().getName()
+                    + " → computing square of 5");
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return 5 * 5;
+        });
+        
+        // Non-blocking callback
+        cf1.thenAccept(result -> 
+            System.out.println("[CompletableFuture-Callback] Result: " + result)
+        );
+        
+        // 5b. Chaining operations
+        CompletableFuture<String> cf2 = CompletableFuture.supplyAsync(() -> {
+            System.out.println("[CompletableFuture-Chain] Step 1: Fetching number");
+            return 10;
+        }).thenApply(num -> {
+            System.out.println("[CompletableFuture-Chain] Step 2: Squaring " + num);
+            return num * num;
+        }).thenApply(squared -> {
+            System.out.println("[CompletableFuture-Chain] Step 3: Converting to String");
+            return "Result: " + squared;
+        });
+        
+        cf2.thenAccept(finalResult -> 
+            System.out.println("[CompletableFuture-Chain] Final: " + finalResult)
+        );
+        
+        // 5c. Exception handling with CompletableFuture
+        CompletableFuture<String> cf3 = CompletableFuture.supplyAsync(() -> {
+            System.out.println("[CompletableFuture-Exception] About to fail");
+            if (true) throw new RuntimeException("Simulated failure");
+            return "Success";
+        }).exceptionally(ex -> {
+            System.out.println("[CompletableFuture-Exception] Caught: " + ex.getMessage());
+            return "Recovered from failure";
+        });
+        
+        cf3.thenAccept(result -> 
+            System.out.println("[CompletableFuture-Exception] Final result: " + result)
+        );
+        
+        // 5d. Combining multiple CompletableFutures
+        CompletableFuture<Integer> cfA = CompletableFuture.supplyAsync(() -> {
+            System.out.println("[CompletableFuture-Combine] Task A running");
+            return 20;
+        });
+        
+        CompletableFuture<Integer> cfB = CompletableFuture.supplyAsync(() -> {
+            System.out.println("[CompletableFuture-Combine] Task B running");
+            return 30;
+        });
+        
+        CompletableFuture<Integer> combined = cfA.thenCombine(cfB, (a, b) -> {
+            System.out.println("[CompletableFuture-Combine] Combining " + a + " + " + b);
+            return a + b;
+        });
+        
+        combined.thenAccept(sum -> 
+            System.out.println("[CompletableFuture-Combine] Sum: " + sum)
+        );
+        
+        // 5e. Manual completion
+        CompletableFuture<String> manualCf = new CompletableFuture<>();
+        
+        // Complete it manually from another thread
+        new Thread(() -> {
+            try {
+                Thread.sleep(50);
+                manualCf.complete("Manually completed!");
+            } catch (InterruptedException e) {
+                manualCf.completeExceptionally(e);
+            }
+        }).start();
+        
+        manualCf.thenAccept(result -> 
+            System.out.println("[CompletableFuture-Manual] " + result)
+        );
+        
+        // Wait for all CompletableFutures to complete before shutting down
+        CompletableFuture.allOf(cf1, cf2, cf3, combined, manualCf)
+                .orTimeout(2, TimeUnit.SECONDS)
+                .join();
+        
         executor.shutdown();
         System.out.println("\n=== Done ===");
     }
