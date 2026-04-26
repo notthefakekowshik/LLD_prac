@@ -16,30 +16,135 @@ Creating and destroying threads dynamically is expensive and resource-intensive.
 
 The `java.util.concurrent.Executors` class provides factory methods to create several standard thread pool configurations:
 
-1. **`newFixedThreadPool(int nThreads)`**
-   - Creates a thread pool with a fixed number of threads.
-   - If a thread dies, a new one is created.
-   - Uses an **unbounded queue** (`LinkedBlockingQueue`). If all threads are busy, tasks wait in the queue.
+### 1. `newFixedThreadPool(int nThreads)`
+- Fixed number of threads — never grows, never shrinks.
+- If a thread dies unexpectedly, a replacement is created.
+- Queue: **unbounded `LinkedBlockingQueue`** — tasks wait forever if all threads are busy.
+- `maximumPoolSize` == `corePoolSize`, so extra threads are never created.
+- **Production warning:** unbounded queue → OOM if producers outpace consumers. Always prefer `ThreadPoolExecutor` with a bounded `ArrayBlockingQueue` in production.
+- **Best for:** known, bounded workloads — CPU-bound batch jobs, server request handlers with known max concurrency.
 
-2. **`newCachedThreadPool()`**
-   - Creates a pool that creates new threads as needed but will reuse previously constructed threads when they are available.
-   - Threads that have been idle for 60 seconds are terminated and removed from the cache.
-   - Good for short-lived, asynchronous tasks.
-   - Uses a **`SynchronousQueue`** (size 0), which directly hands off tasks to threads.
+```java
+ExecutorService pool = Executors.newFixedThreadPool(4);
+```
 
-3. **`newSingleThreadExecutor()`**
-   - Creates an Executor that uses a single worker thread.
-   - Guarantees that tasks are executed sequentially.
-   - Uses an **unbounded queue**.
+---
 
-4. **`newScheduledThreadPool(int corePoolSize)`**
-   - Creates a pool that can schedule commands to run after a given delay or to execute periodically.
-   - Uses a **`DelayedWorkQueue`**.
+### 2. `newCachedThreadPool()`
+- Grows unboundedly — creates a new thread for every task that has no idle thread available.
+- Idle threads are reaped after **60 seconds**.
+- Queue: **`SynchronousQueue`** (zero capacity) — every submitted task either finds a waiting thread instantly or a new thread is created.
+- `corePoolSize` = 0, `maximumPoolSize` = `Integer.MAX_VALUE`.
+- **Production warning:** under high load, can create thousands of threads → native memory exhaustion (`OutOfMemoryError: unable to create native thread`).
+- **Best for:** many short-lived, burst tasks where thread count naturally self-limits (e.g., lightweight I/O callbacks).
 
-5. **`newWorkStealingPool(int parallelism)`** *(Introduced in Java 8)*
-   - Creates a thread pool that maintains enough threads to support the given parallelism level.
-   - Uses multiple queues to reduce contention.
-   - Backed by `ForkJoinPool`.
+```java
+ExecutorService pool = Executors.newCachedThreadPool();
+```
+
+---
+
+### 3. `newSingleThreadExecutor()`
+- Single worker thread — all tasks run sequentially in submission order.
+- If the thread dies, a replacement is created automatically (unlike a `newFixedThreadPool(1)` which can be reconfigured via cast).
+- Queue: **unbounded `LinkedBlockingQueue`**.
+- The returned `ExecutorService` is wrapped in a finalization-safe proxy — you cannot cast it to `ThreadPoolExecutor` to change its pool size.
+- **Best for:** serializing access to a shared resource (e.g., single-threaded log writer, ordered event processor).
+
+```java
+ExecutorService pool = Executors.newSingleThreadExecutor();
+```
+
+---
+
+### 4. `newScheduledThreadPool(int corePoolSize)`
+- Runs tasks after a delay or at a fixed rate/fixed delay.
+- Queue: **`DelayedWorkQueue`** (a specialized min-heap by next execution time — same concept as `DelayQueue`).
+- Key scheduling methods:
+
+```java
+ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+
+// One-shot: run once after 500ms
+scheduler.schedule(task, 500, TimeUnit.MILLISECONDS);
+
+// Fixed rate: run every 1s regardless of task duration
+// If task takes 3s, next run is LATE but not skipped
+scheduler.scheduleAtFixedRate(task, 0, 1, TimeUnit.SECONDS);
+
+// Fixed delay: wait 1s AFTER task completes, then run again
+// If task takes 3s, next run starts at 3s + 1s = 4s
+scheduler.scheduleWithFixedDelay(task, 0, 1, TimeUnit.SECONDS);
+```
+
+**`scheduleAtFixedRate` vs `scheduleWithFixedDelay`:**
+
+| | `scheduleAtFixedRate` | `scheduleWithFixedDelay` |
+|---|---|---|
+| Period measured from | Start of previous execution | End of previous execution |
+| Slow task (takes > period) | Next run is delayed, but not skipped | Always waits full delay after completion |
+| Use when | Tasks should run on a wall-clock schedule | Tasks should have a rest gap between runs |
+| Example | Heartbeat every 10s | Retry polling (wait 5s after each attempt) |
+
+**Note:** If a task throws an uncaught exception, subsequent executions are **silently suppressed**. Always wrap task body in try-catch.
+
+---
+
+### 5. `newWorkStealingPool(int parallelism)` *(Java 8)*
+- Backed by a **`ForkJoinPool`** with the given parallelism level (defaults to `Runtime.getRuntime().availableProcessors()` if no arg).
+- Each worker thread has its **own deque** of tasks. When a thread finishes its own work, it **steals tasks from the tail** of another thread's deque — minimizes contention on a shared queue.
+- Threads are **daemon threads** — the JVM can exit without an explicit `shutdown()` call (unlike all other OOTB pools).
+- Task execution order is **NOT guaranteed** — tasks may run in any order.
+- Optimal for **divide-and-conquer** workloads (recursive tasks that fork into sub-tasks).
+- **Not suitable** for tasks that need sequential execution or hold locks (stealing can cause priority inversion).
+
+```java
+// parallelism defaults to availableProcessors()
+ExecutorService pool = Executors.newWorkStealingPool();
+
+// explicit parallelism
+ExecutorService pool = Executors.newWorkStealingPool(8);
+```
+
+Work-stealing algorithm:
+```
+Thread-1 deque: [T1, T2, T3]   ← T1 runs from head
+Thread-2 deque: []              ← idle → steals T3 from TAIL of Thread-1
+Thread-3 deque: [T4]            ← runs T4
+```
+
+---
+
+### 6. `newVirtualThreadPerTaskExecutor()` *(Java 21)*
+- Creates a new **virtual thread** for every submitted task — no pooling needed (virtual threads are cheap to create).
+- `corePoolSize` and `maximumPoolSize` concepts don't apply — there is no pool.
+- Backed by a `ForkJoinPool` carrier thread pool (managed by the JVM).
+- Virtual threads block cheaply — no carrier thread is pinned when the virtual thread is parked (except inside `synchronized` blocks — use `ReentrantLock` instead).
+- **Best for:** high-concurrency I/O-bound workloads (HTTP servers, DB queries, file reads) with thousands of concurrent tasks.
+- **Not for:** CPU-bound tasks (virtual threads don't add parallelism beyond the number of CPU cores).
+
+```java
+// Java 21+
+ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor();
+
+// Every submit() creates a fresh virtual thread — no queueing
+pool.submit(() -> {
+    // blocking I/O here is fine — virtual thread parks, carrier is freed
+    String result = httpClient.get("https://api.example.com/data");
+    process(result);
+});
+```
+
+**OOTB Pools — Quick Comparison:**
+
+| Factory Method | Threads | Queue | Max Threads | Daemon? | Best For |
+|---|---|---|---|---|---|
+| `newFixedThreadPool(n)` | Fixed | Unbounded LBQ | = core | No | Known-size CPU/IO workloads |
+| `newCachedThreadPool()` | Elastic | SynchronousQueue | ∞ | No | Bursty short-lived tasks |
+| `newSingleThreadExecutor()` | 1 | Unbounded LBQ | 1 | No | Ordered sequential execution |
+| `newScheduledThreadPool(n)` | Fixed core | DelayedWorkQueue | ∞ | No | Delayed/periodic tasks |
+| `newWorkStealingPool(p)` | ≈ parallelism | Per-thread deques | dynamic | **Yes** | Fork-join, divide-and-conquer |
+| `newVirtualThreadPerTaskExecutor()` | 1 per task | None | ∞ (virtual) | Yes | High-concurrency I/O (Java 21) |
 
 ---
 
@@ -170,3 +275,44 @@ try {
     Thread.currentThread().interrupt();
 }
 ```
+
+---
+
+## 7. Interview Q&A
+
+**Q: Why is `newFixedThreadPool` dangerous in production?**
+A: It uses an unbounded `LinkedBlockingQueue`. If tasks are submitted faster than they are processed, the queue grows without limit until `OutOfMemoryError`. Always use a custom `ThreadPoolExecutor` with a bounded `ArrayBlockingQueue` and a `RejectedExecutionHandler` in production.
+
+**Q: What is the difference between `newFixedThreadPool(1)` and `newSingleThreadExecutor()`?**
+A: Both use one thread and an unbounded queue. The difference: `newSingleThreadExecutor()` wraps the pool in a proxy that prevents callers from casting it to `ThreadPoolExecutor` and reconfiguring it (e.g., calling `setCorePoolSize(4)`). The single-thread guarantee is enforced. With `newFixedThreadPool(1)` you can cast and accidentally resize the pool.
+
+**Q: Why can `newCachedThreadPool` cause OOM?**
+A: Its `maximumPoolSize` is `Integer.MAX_VALUE` and it uses `SynchronousQueue` (zero buffer). Every submitted task that finds no idle thread immediately spawns a new OS thread. Under a spike of thousands of concurrent submissions, thousands of threads are created — each consuming native stack memory (~512KB default) — leading to `OutOfMemoryError: unable to create native thread`.
+
+**Q: What is the difference between `scheduleAtFixedRate` and `scheduleWithFixedDelay`?**
+A: `scheduleAtFixedRate` measures the period from the *start* of the previous execution — the next run is scheduled at `start + period`. `scheduleWithFixedDelay` measures the delay from the *end* of the previous execution — the next run is scheduled at `end + delay`. If the task takes longer than the period, `scheduleAtFixedRate` will run the next iteration immediately after completion (it catches up), while `scheduleWithFixedDelay` always respects the gap after completion.
+
+**Q: What happens if a task throws an exception in `scheduleAtFixedRate`?**
+A: The recurring execution is **silently cancelled** — no future runs happen and no exception is propagated. The `ScheduledFuture` returned will rethrow the exception when `get()` is called. Always wrap the task body in try-catch to prevent silent suppression.
+
+**Q: Why are `newWorkStealingPool` threads daemon threads?**
+A: Work-stealing pools are designed for parallel computation that runs as part of the program's main work. Since they're backed by `ForkJoinPool`, the JVM treats them as background computational helpers — the application shouldn't have to track their lifecycle. Non-daemon threads would prevent JVM exit even if the main program is done.
+
+**Q: When would you choose `newVirtualThreadPerTaskExecutor` over `newFixedThreadPool`?**
+A: For I/O-bound workloads with many concurrent tasks. Virtual threads are extremely cheap (stack starts at ~few hundred bytes, not 512KB). A `newFixedThreadPool(200)` limits concurrency to 200; `newVirtualThreadPerTaskExecutor()` can handle 100,000+ concurrent tasks without exhausting memory, because each virtual thread parks cheaply while waiting for I/O instead of tying up an OS thread.
+
+**Q: Can you use `newVirtualThreadPerTaskExecutor` for CPU-intensive tasks?**
+A: Not beneficially. Virtual threads run on top of a `ForkJoinPool` of platform threads sized to the number of CPU cores. CPU-bound tasks keep the carrier threads busy the entire time — you get no concurrency advantage over a fixed thread pool of `N_CPU` threads. Worse, if you create millions of virtual threads all doing CPU work, the scheduler overhead degrades throughput.
+
+---
+
+## 8. Demo Files Reference
+
+| File | Key scenarios demonstrated |
+|---|---|
+| `FixedThreadPoolDemo.java` | Queue backlog proof; thread reuse across batches; bounded production-safe variant with rejection handler |
+| `CachedThreadPoolDemo.java` | Elasticity (grow on burst, idle after); thread reuse between waves; OOM risk illustration; bounded safe alternative; live thread-count drain with monitor |
+| `SingleThreadExecutorDemo.java` | Sequential ordering guarantee; thread resurrection after worker crash; proxy cast protection vs `newFixedThreadPool(1)`; serialized log writer without synchronization |
+| `ScheduledThreadPoolDemo.java` | One-shot delayed task; `scheduleAtFixedRate`; `scheduleWithFixedDelay`; slow-task comparison (rate vs delay) side-by-side; silent exception suppression + try-catch fix |
+| `WorkStealingPoolDemo.java` | Throughput vs fixed pool on CPU-bound tasks; divide-and-conquer parallel array sum; daemon thread proof; uneven task distribution with work stealing |
+| `VirtualThreadExecutorDemo.java` | 10,000 tasks in ~100ms; I/O throughput vs fixed pool; `isVirtual`/`isDaemon` properties; carrier pinning with `synchronized` vs `ReentrantLock` |

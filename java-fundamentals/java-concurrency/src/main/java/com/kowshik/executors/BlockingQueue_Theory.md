@@ -159,3 +159,150 @@ public class LinkedBlockingQueueExample {
   - You need higher overall throughput in highly concurrent applications (many threads accessing the queue).
   - You have a large or unbounded queue requirement (always bounds it to a reasonable size in production!).
   - Allocation and GC overhead of small node objects is acceptable. (Usually, the two-lock concurrency benefit outweighs the Node allocation cost).
+
+---
+
+## 6. SynchronousQueue
+
+`SynchronousQueue` has **zero capacity** — it holds no elements. A `put()` blocks until another thread calls `take()`, and vice versa. Every insert must be directly matched with a remove.
+
+**Key characteristics:**
+- No internal storage — it is a direct thread-to-thread handoff channel.
+- `put()` blocks until a consumer is ready. `take()` blocks until a producer is ready.
+- `size()` always returns 0. `peek()` always returns `null`.
+- Supports fair mode (`new SynchronousQueue<>(true)`) — waiting threads served in FIFO order.
+
+```java
+SynchronousQueue<String> handoff = new SynchronousQueue<>();
+
+// Producer — blocks until a consumer takes
+new Thread(() -> {
+    try {
+        System.out.println("Producer: handing off task");
+        handoff.put("task-1");             // blocks here until consumer calls take()
+        System.out.println("Producer: task accepted by consumer");
+    } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+}).start();
+
+// Consumer — blocks until a producer puts
+new Thread(() -> {
+    try {
+        String task = handoff.take();      // blocks here until producer calls put()
+        System.out.println("Consumer: received " + task);
+    } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+}).start();
+```
+
+**Internal use:** `Executors.newCachedThreadPool()` uses `SynchronousQueue` internally. Every submitted task either immediately finds an idle thread to run it, or a new thread is created. This is why `newCachedThreadPool` can create unbounded threads — the queue never buffers.
+
+**Use cases:**
+- Direct task handoff between threads with no buffering.
+- When you want backpressure by design: producer cannot proceed faster than consumer.
+- Coordination patterns where synchronization is the goal, not buffering.
+
+**Pitfall:** Never use `SynchronousQueue` with a fixed-size thread pool when the pool is saturated — `put()` will block the producer indefinitely if all threads are busy and none are free to `take()`.
+
+---
+
+## 7. PriorityBlockingQueue
+
+`PriorityBlockingQueue` is an **unbounded** blocking queue that orders elements by natural ordering or a custom `Comparator`. The head is always the element with the highest priority (lowest value by default).
+
+**Key characteristics:**
+- **Unbounded** — `put()` never blocks (but can throw `OutOfMemoryError`).
+- Elements must implement `Comparable` or you must provide a `Comparator`.
+- Does NOT guarantee FIFO among equal-priority elements.
+- Backed by a **binary heap** — O(log n) insert and remove, O(1) peek.
+- `take()` still blocks when the queue is empty.
+
+```java
+// Elements must be Comparable (or pass a Comparator to constructor)
+static class Task implements Comparable<Task> {
+    final String name;
+    final int priority; // lower number = higher priority
+
+    Task(String name, int priority) { this.name = name; this.priority = priority; }
+
+    @Override
+    public int compareTo(Task other) {
+        return Integer.compare(this.priority, other.priority); // min-heap
+    }
+
+    @Override public String toString() { return name + "(p=" + priority + ")"; }
+}
+
+PriorityBlockingQueue<Task> queue = new PriorityBlockingQueue<>();
+
+queue.put(new Task("low-priority-job",    10));
+queue.put(new Task("critical-alert",       1));
+queue.put(new Task("background-cleanup",  20));
+queue.put(new Task("user-request",         5));
+
+// take() always returns the highest-priority (lowest int) element
+System.out.println(queue.take()); // critical-alert(p=1)
+System.out.println(queue.take()); // user-request(p=5)
+System.out.println(queue.take()); // low-priority-job(p=10)
+System.out.println(queue.take()); // background-cleanup(p=20)
+```
+
+**Use cases:**
+- Task execution where some tasks are more urgent than others (e.g., payment processing > analytics).
+- Event-driven systems where high-priority events must be handled first.
+- Dijkstra's shortest-path, A* search, and other graph algorithms in concurrent contexts.
+
+**Pitfall:** Because it is unbounded, a slow consumer with a fast producer will grow the queue without bound → `OutOfMemoryError`. Add an external capacity guard (e.g., `Semaphore`) if needed.
+
+---
+
+## 8. LinkedTransferQueue (Java 7)
+
+`LinkedTransferQueue` is an **unbounded** queue that combines the behaviors of `LinkedBlockingQueue` and `SynchronousQueue`.
+
+**Key method:** `transfer(e)` — behaves like `SynchronousQueue.put()`: blocks until a consumer takes the element directly. If a consumer is already waiting, the handoff is immediate; otherwise the element is queued and the producer blocks until a consumer arrives.
+
+```java
+LinkedTransferQueue<String> queue = new LinkedTransferQueue<>();
+
+// transfer() — direct handoff if consumer waiting, otherwise queue + block
+queue.transfer("urgent-item");     // blocks until consumed
+
+// put() — always enqueues, never blocks (standard queue behavior)
+queue.put("buffered-item");
+
+// tryTransfer() — non-blocking: returns false if no consumer waiting
+boolean transferred = queue.tryTransfer("item");
+```
+
+**Use case:** Systems that prefer direct handoff (low latency) but can fall back to buffering under load — like a message bus where you want to avoid copying when a consumer is ready.
+
+---
+
+## 9. Full Comparison Table
+
+| Class | Bounded? | Ordering | Locks | put() blocks? | take() blocks? | Use Case |
+|---|---|---|---|---|---|---|
+| `ArrayBlockingQueue` | ✅ Yes | FIFO | Single lock | When full | When empty | Bounded producer-consumer |
+| `LinkedBlockingQueue` | Optional | FIFO | Two locks | When full | When empty | High-throughput producer-consumer |
+| `SynchronousQueue` | 0 capacity | N/A | CAS | Until consumer ready | Until producer ready | Direct handoff, `newCachedThreadPool` |
+| `PriorityBlockingQueue` | ❌ No | Priority | Single lock | Never (unbounded) | When empty | Priority task scheduling |
+| `DelayQueue` | ❌ No | Delay expiry | Single lock | Never (unbounded) | Until delay expires | Cache TTL, scheduled tasks |
+| `LinkedTransferQueue` | ❌ No | FIFO | CAS (lock-free) | Only `transfer()` | When empty | Low-latency handoff with buffer fallback |
+
+---
+
+## 10. Interview Q&A
+
+**Q: Why does `newCachedThreadPool()` use `SynchronousQueue`?**
+A: `newCachedThreadPool` wants zero buffering — every task should either run immediately on an idle thread or trigger creation of a new thread. `SynchronousQueue`'s zero-capacity design enforces this: a submitted task either finds a waiting thread instantly or the pool creates a new one. There is no queue to absorb tasks.
+
+**Q: `ArrayBlockingQueue` vs `LinkedBlockingQueue` — which has higher throughput and why?**
+A: `LinkedBlockingQueue` generally has higher throughput in producer-consumer scenarios because it uses two separate locks (`putLock` and `takeLock`). Producers and consumers rarely contend with each other. `ArrayBlockingQueue` uses a single lock, so a producer and consumer always serialize. However, `ArrayBlockingQueue` has better cache locality (contiguous array) and no per-element node allocation, which matters under low contention.
+
+**Q: Can `PriorityBlockingQueue` cause starvation?**
+A: Yes. If high-priority tasks arrive continuously, low-priority tasks may never be processed. This is known as priority inversion or starvation. Mitigation: age low-priority tasks over time (increase their priority if they've been waiting too long).
+
+**Q: What happens if you call `put()` on a `SynchronousQueue` and no consumer is ready?**
+A: `put()` blocks indefinitely until a thread calls `take()`. If you want a non-blocking check, use `offer()` — it returns `false` immediately if no consumer is waiting. Use `offer(e, timeout, unit)` for a timed attempt.
+
+**Q: Why is `PriorityBlockingQueue` unbounded — isn't that dangerous?**
+A: By design — the priority ordering means you can't know in advance which element will be needed next, so a fixed capacity could reject important high-priority tasks. The risk of OOM is real; in production, pair it with a `Semaphore` or rate limiter to cap the number of items enqueued.

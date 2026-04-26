@@ -8,6 +8,34 @@ Complete phases in order. Each phase builds on the previous one.
 
 ---
 
+## Completion Status
+
+| Phase | Status |
+|---|---|
+| Phase 1 — Threads & JMM | ✅ Complete |
+| Phase 2 — Synchronization & Locking | ✅ Complete |
+| Phase 3 — JUC Toolkit | ✅ Complete |
+| Phase 4.1 — Concurrency Patterns | ✅ Complete |
+| Phase 4.2 — Advanced Systems | ✅ Complete |
+| Phase 4.3 — LeetCode Concurrency | ⬜ Not started |
+| Phase 5 — GC | ✅ Complete |
+
+**Extra files added (beyond roadmap):**
+- `locks/Locks_DeepDive.md` — intrinsic/extrinsic tree, `synchronized` vs `Condition`, pessimistic/optimistic locking
+- `locks/SemaphoreVsMutexDemo.java` — `Semaphore(1)` ownership bug vs `ReentrantLock`
+- `threads/ThreadLocalLeakDemo.java` — data bleeding, large-object leak, unique-TL-per-request anti-pattern
+- `advanced/AbstractQueuedSynchronizer_Theory.md` — AQS internals, custom synchronizer code, Q&A
+- `advanced/VirtualThreads_Theory.md` — virtual threads, pinning, structured concurrency
+- `advanced/HikariCP_PoolSizing_Theory.md` — connection pool sizing under virtual threads
+- `executors/BlockingQueue_Theory.md` — extended with `SynchronousQueue`, `PriorityBlockingQueue`, `LinkedTransferQueue`, full comparison table, Q&A
+
+**Remaining gaps:**
+- ⬜ `leetcodeconcurrency/` package — all 4 problems not yet implemented
+- ⬜ `volatile` double-checked locking demo — broken pattern vs correct `volatile` singleton
+- ⬜ Thread interruption contract demo — `interrupt()`, `isInterrupted()`, restore vs propagate
+
+---
+
 ## Phase 1 — Foundations: Threads and the Java Memory Model
 
 Master how threads are born, run, and die. Build the correct mental model of Java's memory visibility guarantees before touching any synchronization primitive.
@@ -18,6 +46,7 @@ Master how threads are born, run, and die. Build the correct mental model of Jav
 | `threads/ThreadCreationDemo.java` | Thread vs Runnable vs Callable vs lambda; daemon threads; thread naming |
 | `threads/ThreadLifecycleDemo.java` | All 6 states (NEW → RUNNABLE → BLOCKED/WAITING/TIMED_WAITING → TERMINATED) with real transitions |
 | `threads/ThreadLocalDemo.java` | Thread-confined state; memory leak pattern in thread pools; InheritableThreadLocal |
+| `threads/ThreadLocalLeakDemo.java` | Data bleeding between requests; large object leak; unique-ThreadLocal-per-request anti-pattern; correct remove() pattern |
 
 ### 1.2 Java Memory Model
 | File | What it covers |
@@ -92,6 +121,12 @@ The high-level utilities you use in production every day. Master all of them.
 | `executors/ForkJoinPoolDemo.java` | Fork-join framework; work stealing; `RecursiveTask` |
 | `executors/ThreadFactoryDemo.java` | Custom thread naming; daemon factory |
 | `executors/ThreadFactoryDemoImproved.java` | Improved factory with UncaughtExceptionHandler |
+| `executors/FixedThreadPoolDemo.java` | Queue backlog; thread reuse; production-safe bounded variant |
+| `executors/CachedThreadPoolDemo.java` | Elasticity; thread reuse; OOM risk; bounded safe alternative |
+| `executors/SingleThreadExecutorDemo.java` | Sequential ordering; thread resurrection; proxy protection; serialized writer |
+| `executors/ScheduledThreadPoolDemo.java` | schedule once; fixedRate vs fixedDelay; slow task comparison; silent suppression fix |
+| `executors/WorkStealingPoolDemo.java` | Throughput vs fixed pool; divide-and-conquer; daemon threads; uneven task stealing |
+| `executors/VirtualThreadExecutorDemo.java` | 10k tasks; I/O throughput; isVirtual; carrier pinning with synchronized vs ReentrantLock |
 
 **Theory:** `executors/Executors_Theory.md`, `executors/BlockingQueue_Theory.md`
 
