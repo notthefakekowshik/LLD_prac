@@ -223,7 +223,18 @@ Pinned thread: VirtualThread[#23]/runnable@ForkJoinPool-1-worker-3
 
 ---
 
-## 5. When NOT to Use Virtual Threads
+## 5. Excellent Fit vs Poor Fit
+
+| Excellent Fit | Poor Fit |
+|---------------|----------|
+| HTTP request handling | CPU-heavy analytics |
+| DB + network I/O apps | Tight lock-heavy systems |
+| Microservices waiting on APIs | Native blocking legacy code |
+| Simplifying async code | Extreme low-latency trading loops |
+
+---
+
+## 6. When NOT to Use Virtual Threads
 
 ### CPU-Bound Work (No Benefit)
 
@@ -276,7 +287,7 @@ Executors.newVirtualThreadPerTaskExecutor();  // Unlimited, per-task threads
 
 ---
 
-## 6. Structured Concurrency with `StructuredTaskScope`
+## 7. Structured Concurrency with `StructuredTaskScope`
 
 ### The Problem with "Fire and Forget"
 
@@ -324,7 +335,7 @@ try (var scope = new StructuredTaskScope.ShutdownOnSuccess<String>()) {
 
 ---
 
-## 7. Virtual Threads ≠ Infinite Scalability Trap
+## 8. Virtual Threads ≠ Infinite Scalability Trap
 
 ### The Myth
 
@@ -397,9 +408,14 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 }
 ```
 
+> **Runnable Demo:** See `VirtualThreadsDbBottleneckDemo.java` for full working code showing:
+> - Unbounded concurrency (the 1M threads / 30 DB connections problem)
+> - Semaphore-guarded fix
+> - Caching, batching, and backpressure patterns
+
 ---
 
-## 8. Real-World Case Study: The "Silent Death" Scenario
+## 9. Real-World Case Study: The "Silent Death" Scenario
 
 > **Scenario:** Spring Boot on Java 21. You enable virtual threads for Tomcat (`spring.threads.virtual.enabled=true`). Under load, the service stops responding. JVM is alive, no OOM, no crash. What went wrong?
 
@@ -501,7 +517,7 @@ jstack <pid> | grep -A 5 "ForkJoinPool"
 
 ---
 
-## 9. Migration Checklist from Platform Threads
+## 10. Migration Checklist from Platform Threads
 
 | Step | Action | Priority |
 |------|--------|----------|
@@ -515,7 +531,7 @@ jstack <pid> | grep -A 5 "ForkJoinPool"
 
 ---
 
-## 10. Quick Reference: Syntax & APIs
+## 11. Quick Reference: Syntax & APIs
 
 ```java
 // Java 21+ — Virtual Threads GA
@@ -548,7 +564,7 @@ ScopedValue.where(REQUEST_ID, "abc-123").run(() -> {
 
 ---
 
-## 11. Summary: Key Interview Points
+## 12. Summary: Key Interview Points
 
 1. **Virtual threads are JVM-managed, not OS-managed** — millions vs. thousands
 2. **They unmount from carriers during blocking I/O** — the core efficiency gain
@@ -557,3 +573,8 @@ ScopedValue.where(REQUEST_ID, "abc-123").run(() -> {
 5. **External resource limits still apply** — DB connections, bandwidth, heap
 6. **Structured concurrency prevents task leaks** — parent scope owns child lifetimes
 7. **ScopedValue replaces ThreadLocal** — more efficient with virtual thread migration
+
+
+### Interview-Level One-Liner
+
+> **Virtual threads improve concurrency scalability for blocking I/O workloads, but they do not increase CPU parallelism and still require careful control of scarce resources like DB pools, locks, and downstream services.**
