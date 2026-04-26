@@ -9,6 +9,7 @@
 ### The 1MB-per-Thread Tax
 
 Every `java.lang.Thread` (platform thread) is a **wrapper around an OS thread**. The OS allocates:
+
 - **Stack memory**: ~512KB–1MB per thread (configurable via `-Xss`)
 - **Kernel resources**: Thread control blocks, scheduling metadata
 - **Context switch overhead**: CPU cycles spent saving/restoring registers
@@ -42,6 +43,7 @@ fetchUserAsync(userId)
 ```
 
 **Cost of reactive:**
+
 - Callback hell / functional pipeline complexity
 - Debugging stack traces become unreadable
 - Blocking libraries (JDBC, Hibernate) cannot be used directly
@@ -94,15 +96,17 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 
 ### Key Differences Summary
 
-| Aspect | Platform Thread | Virtual Thread |
-|--------|----------------|----------------|
-| **Managed by** | Operating System | JVM |
-| **Stack size** | Fixed ~1MB (contiguous) | Growable, starts ~KB |
-| **Creation cost** | ~1ms (syscall) | ~1μs (JVM heap allocation) |
-| **Max count** | Thousands | Millions |
-| **Context switch** | OS kernel mode (~μs) | JVM user mode (~ns) |
-| **Blocking I/O** | Thread blocks, wastes OS resource | Thread unmounts, carrier freed |
-| **Code style** | Blocking or reactive callbacks | Just write blocking code |
+
+| Aspect             | Platform Thread                   | Virtual Thread                 |
+| ------------------ | --------------------------------- | ------------------------------ |
+| **Managed by**     | Operating System                  | JVM                            |
+| **Stack size**     | Fixed ~1MB (contiguous)           | Growable, starts ~KB           |
+| **Creation cost**  | ~1ms (syscall)                    | ~1μs (JVM heap allocation)     |
+| **Max count**      | Thousands                         | Millions                       |
+| **Context switch** | OS kernel mode (~μs)              | JVM user mode (~ns)            |
+| **Blocking I/O**   | Thread blocks, wastes OS resource | Thread unmounts, carrier freed |
+| **Code style**     | Blocking or reactive callbacks    | Just write blocking code       |
+
 
 ---
 
@@ -171,10 +175,19 @@ Thread.ofVirtual().start(() -> {
 
 ### Why Does Pinning Happen?
 
-The JVM cannot unmount a virtual thread that holds a **synchronized monitor** because:
-- The monitor is associated with the **carrier thread's** internal state
-- Moving the virtual thread to another carrier would orphan the monitor
-- Could cause deadlocks if another thread is waiting on that monitor
+Pinning is triggered when a virtual thread reaches a **blocking/parking point** (e.g., `Thread.sleep`, socket I/O, `LockSupport.park`, monitor wait) **while the execution is inside a region the JVM cannot safely suspend and move**.
+
+In practice, the most common culprit is:
+
+- A virtual thread **holds a `synchronized` monitor** and then performs a blocking operation.
+
+Why that pins (conceptually):
+
+- `**synchronized` uses JVM object monitors** (enter/exit, wait/notify) with invariants that are tied to the *currently executing* Java thread at the moment of ownership.
+- **Unmounting a virtual thread means suspending its continuation and later resuming it on a different carrier**.
+- While a monitor is owned, **the JVM does not (currently) support transferring that monitor-ownership state across carriers at an arbitrary blocking point**, so it conservatively keeps the virtual thread mounted and blocks the carrier too.
+
+So it’s not that *“virtual threads + synchronized always pin”* — it’s **“blocking while in/under `synchronized` pins”**.
 
 ### The Fix: Replace `synchronized` with `ReentrantLock`
 
@@ -194,6 +207,23 @@ Thread.ofVirtual().start(() -> {
 });
 ```
 
+### Why `ReentrantLock` Usually Does NOT Pin
+
+`ReentrantLock` is built on `AbstractQueuedSynchronizer` (AQS) and **uses parking (`LockSupport.park`) for contention** rather than JVM monitor ownership.
+See `AbstractQueuedSynchronizer_Theory.md` for a clear mental model of **what AQS contains** (state + queue + park/unpark + conditions) and common interview scenarios.
+
+For virtual threads, those parking points are **virtual-thread-aware**:
+
+- When a virtual thread needs to park, the JVM can **unmount** it from the carrier.
+- The carrier is freed to run other virtual threads.
+- When unparked, the virtual thread can resume on *any* available carrier.
+
+### Important Caveats (Don’t Over-generalize)
+
+- **ReentrantLock prevents *pinning*, not *contention***: holding *any* lock (monitor or `ReentrantLock`) across long I/O is still a throughput killer because it serializes progress.
+- **Pinning can still happen without `synchronized`** if you block in **native code / JNI / some legacy blocking paths** that the JVM cannot instrument for unmounting.
+- **Prefer `Condition` over `wait/notify`**: `Object.wait/notify` are monitor-based and belong with `synchronized`; with `ReentrantLock`, use `lock.newCondition()`.
+
 ### Detection: JVM Flag
 
 ```bash
@@ -205,6 +235,7 @@ java -Djdk.tracePinnedThreads=short MyApp
 ```
 
 **Output example:**
+
 ```
 Pinned thread: VirtualThread[#23]/runnable@ForkJoinPool-1-worker-3
     at java.base/java.lang.VirtualThread$VThreadContinuation.onPinned(...)
@@ -213,24 +244,29 @@ Pinned thread: VirtualThread[#23]/runnable@ForkJoinPool-1-worker-3
 
 ### Pinning Checklist for Code Review
 
-| Dangerous Pattern | Safe Replacement |
-|-------------------|------------------|
-| `synchronized` method/block | `ReentrantLock` |
-| `Object.wait()` / `notify()` | `Condition` from `ReentrantLock` |
-| Native code with JNI locks | Restructure to minimize hold time |
-| `Thread.holdsLock()` | Avoid — indicates synchronization |
-| `java.io.FileInputStream` read (native) | Use `java.nio` channels where possible |
+
+| Dangerous Pattern                       | Safe Replacement                                          |
+| --------------------------------------- | --------------------------------------------------------- |
+| Blocking call inside `synchronized`     | Move blocking call outside; otherwise use `ReentrantLock` |
+| `Object.wait()` / `notify()`            | `Condition` from `ReentrantLock`                          |
+| Native code with JNI locks              | Restructure to minimize hold time                         |
+| `Thread.holdsLock()`                    | Avoid — indicates synchronization                         |
+| `java.io.FileInputStream` read (native) | Use `java.nio` channels where possible                    |
+| Holding any lock across long I/O        | Reduce lock scope; guard only shared state updates        |
+
 
 ---
 
 ## 5. Excellent Fit vs Poor Fit
 
-| Excellent Fit | Poor Fit |
-|---------------|----------|
-| HTTP request handling | CPU-heavy analytics |
-| DB + network I/O apps | Tight lock-heavy systems |
-| Microservices waiting on APIs | Native blocking legacy code |
-| Simplifying async code | Extreme low-latency trading loops |
+
+| Excellent Fit                 | Poor Fit                          |
+| ----------------------------- | --------------------------------- |
+| HTTP request handling         | CPU-heavy analytics               |
+| DB + network I/O apps         | Tight lock-heavy systems          |
+| Microservices waiting on APIs | Native blocking legacy code       |
+| Simplifying async code        | Extreme low-latency trading loops |
+
 
 ---
 
@@ -361,16 +397,18 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 
 ### What Virtual Threads Actually Solve
 
-| Problem | Virtual Threads Solve? |
-|---------|------------------------|
-| Thread creation cost / memory | ✅ Yes — cheap, millions possible |
-| Context switch overhead | ✅ Yes — user-mode scheduling |
-| Blocking I/O efficiency | ✅ Yes — carriers shared across waits |
-| Callback complexity | ✅ Yes — write blocking code again |
-| Database connection limits | ❌ No — external resources unchanged |
-| Network bandwidth | ❌ No — still finite |
-| Heap memory for task data | ❌ No — objects still allocated |
-| CPU cores for actual work | ❌ No — computation still needs CPUs |
+
+| Problem                       | Virtual Threads Solve?               |
+| ----------------------------- | ------------------------------------ |
+| Thread creation cost / memory | ✅ Yes — cheap, millions possible     |
+| Context switch overhead       | ✅ Yes — user-mode scheduling         |
+| Blocking I/O efficiency       | ✅ Yes — carriers shared across waits |
+| Callback complexity           | ✅ Yes — write blocking code again    |
+| Database connection limits    | ❌ No — external resources unchanged  |
+| Network bandwidth             | ❌ No — still finite                  |
+| Heap memory for task data     | ❌ No — objects still allocated       |
+| CPU cores for actual work     | ❌ No — computation still needs CPUs  |
+
 
 ### The Correct Mental Model
 
@@ -409,6 +447,7 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 ```
 
 > **Runnable Demo:** See `VirtualThreadsDbBottleneckDemo.java` for full working code showing:
+>
 > - Unbounded concurrency (the 1M threads / 30 DB connections problem)
 > - Semaphore-guarded fix
 > - Caching, batching, and backpressure patterns
@@ -462,10 +501,12 @@ The service appears "dead" while the process is technically healthy.
 
 ### Why This Happens
 
-| Platform Threads | Virtual Threads |
-|---|---|
+
+| Platform Threads                                              | Virtual Threads                                                |
+| ------------------------------------------------------------- | -------------------------------------------------------------- |
 | 200 threads, 50 blocked on `synchronized` → 150 still working | 8 carriers, ALL pinned by `synchronized` → **0 capacity left** |
-| Degraded performance, not complete death | **Complete throughput collapse to zero** |
+| Degraded performance, not complete death                      | **Complete throughput collapse to zero**                       |
+
 
 With platform threads, partial blocking is tolerable because you have many threads. With virtual threads, **pinning even a few carriers kills the entire throughput** because there are very few carriers.
 
@@ -492,11 +533,13 @@ public class OrderController {
 
 ### Other Possible Causes (Less Likely)
 
-| Symptom | Likely Cause | Detection |
-|---------|-------------|-----------|
-| Complete stop, no errors | **Pinning deadlock** (synchronized + blocking) | `-Djdk.tracePinnedThreads=full` |
-| Timeouts, slow degradation | External resource exhaustion (DB pool, HTTP client pool) | Monitor connection pool metrics |
-| Thread dump shows threads waiting on same monitor | Classic deadlock (not pinning-specific) | `jstack` analysis |
+
+| Symptom                                           | Likely Cause                                             | Detection                       |
+| ------------------------------------------------- | -------------------------------------------------------- | ------------------------------- |
+| Complete stop, no errors                          | **Pinning deadlock** (synchronized + blocking)           | `-Djdk.tracePinnedThreads=full` |
+| Timeouts, slow degradation                        | External resource exhaustion (DB pool, HTTP client pool) | Monitor connection pool metrics |
+| Thread dump shows threads waiting on same monitor | Classic deadlock (not pinning-specific)                  | `jstack` analysis               |
+
 
 ### Diagnostic Steps
 
@@ -519,15 +562,17 @@ jstack <pid> | grep -A 5 "ForkJoinPool"
 
 ## 10. Migration Checklist from Platform Threads
 
-| Step | Action | Priority |
-|------|--------|----------|
-| 1 | Profile your workload — is it I/O bound? | Must |
-| 2 | Run with `-Djdk.tracePinnedThreads=full` | Must |
-| 3 | Replace `synchronized` with `ReentrantLock` | Must |
-| 4 | Audit `ThreadLocal` usage — migrate to `ScopedValue` | Should |
-| 5 | Update connection pool sizing (may need reduction) | Should |
-| 6 | Review timeout configurations (virtual threads tolerate higher) | Can |
-| 7 | Load test with realistic external resource constraints | Must |
+
+| Step | Action                                                          | Priority |
+| ---- | --------------------------------------------------------------- | -------- |
+| 1    | Profile your workload — is it I/O bound?                        | Must     |
+| 2    | Run with `-Djdk.tracePinnedThreads=full`                        | Must     |
+| 3    | Replace `synchronized` with `ReentrantLock`                     | Must     |
+| 4    | Audit `ThreadLocal` usage — migrate to `ScopedValue`            | Should   |
+| 5    | Update connection pool sizing (may need reduction)              | Should   |
+| 6    | Review timeout configurations (virtual threads tolerate higher) | Can      |
+| 7    | Load test with realistic external resource constraints          | Must     |
+
 
 ---
 
@@ -574,7 +619,7 @@ ScopedValue.where(REQUEST_ID, "abc-123").run(() -> {
 6. **Structured concurrency prevents task leaks** — parent scope owns child lifetimes
 7. **ScopedValue replaces ThreadLocal** — more efficient with virtual thread migration
 
-
 ### Interview-Level One-Liner
 
 > **Virtual threads improve concurrency scalability for blocking I/O workloads, but they do not increase CPU parallelism and still require careful control of scarce resources like DB pools, locks, and downstream services.**
+
