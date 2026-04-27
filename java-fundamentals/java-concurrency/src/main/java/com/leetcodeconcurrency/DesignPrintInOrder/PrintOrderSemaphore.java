@@ -106,14 +106,14 @@ public class PrintOrderSemaphore {
             threadB.start();
             threadA.start();
 
-            // // Wait for threads to finish before the next iteration
-            // try {
-            // threadA.join();
-            // threadB.join();
-            // threadC.join();
-            // } catch (InterruptedException e) {
-            // e.printStackTrace();
-            // }
+            // Wait for threads to finish before the next iteration
+            try {
+                threadA.join();  // MAIN thread waits for A to finish
+                threadB.join();  // MAIN thread waits for B to finish
+                threadC.join();  // MAIN thread waits for C to finish
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
