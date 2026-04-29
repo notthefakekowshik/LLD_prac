@@ -93,6 +93,7 @@ Each of these is a real-world system component. Apply the full D.I.C.E. workflow
 These are full interview-style problems. Target 90–120 minutes per problem following the time splits in `INSTRUCTIONS.md`. Each must have a `README.md` and a working `Main` demo class.
 
 - [x] **Order Book Engine** — Per-symbol SingleThreadExecutor for lock-free matching. Price-time priority via `TreeMap<price, Deque<Order>>`. LIMIT/MARKET orders, partial fills, cancellation, concurrent multi-symbol producers. ✓ *Completed 2026-04-17 (Thread Confinement, Strategy, Producer-Consumer, Facade)*
+- [x] **Symbol Search Engine** — IntelliJ-style "Search Everywhere" with trigram inverted index, three match strategies (Exact/CamelCase/Subsequence), LRU query cache as Decorator. ✓ *Completed 2026-04-29 (Strategy, Decorator, Builder, Template Method)*
 - [ ] **Parking Lot System** — Multiple levels, multi-vehicle types (Car/Bike/Truck), EV charging spots, concurrent access.
 - [ ] **Movie Booking System (BookMyShow)** — Multiple cities/theaters/screens, seat selection, concurrent booking prevention.
 - [ ] **Splitwise** — Expense tracking, multiple split types (Equal/Exact/Percentage), balance simplification.
