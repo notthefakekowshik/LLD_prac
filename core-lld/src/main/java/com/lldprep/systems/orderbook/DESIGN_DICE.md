@@ -225,6 +225,9 @@ com.lldprep.orderbook/
 | **Persistent audit log** | All events must survive restart | `AuditingTradeListener implements TradeListener` — writes events to a log file/DB. Inject alongside console listener. Decorator or composite listener. |
 | **Market depth report** | Aggregated bid/ask levels | `OrderBook.getDepth(int levels)` — iterate `bids.entrySet()` and `asks.entrySet()` for top N levels. Read-only; no locking needed (called from same executor thread). |
 | **Multiple listeners** | More than one listener needs events | `CompositeTradeListener implements TradeListener` — holds `List<TradeListener>`, delegates all calls. Zero changes to `OrderBook`. |
+| **Hot Stripe (80/20 volume)** | AAPL/NVDA/TSLA generate 80% of traffic, overwhelm single thread | `HybridStripedExecutor` — dedicated fast lanes for Tier 1/2 symbols, shared slow lanes for others. See `HOT_STRIPE_PATTERN.md`. |
+| **Backpressure on overload** | Queue depth exceeds memory limits | Implement `submitWithBackpressure()` — REJECT, BLOCK, or SHED modes. See `HybridStripedExecutor.BackpressureMode`. |
+| **Viral symbol (meme stock)** | Suddenly hot symbol needs dedicated resources | `executor.promoteToFastLane(symbol)` — dynamically migrate from slow lane to dedicated thread. |
 
 ---
 
