@@ -44,6 +44,20 @@ import java.util.concurrent.locks.LockSupport;
  *    - Minimal overhead
  *    - Graceful degradation
  *
+ * 6. CONS of Current Implementation (Global Rate Limiter):
+ *    --------------------------------------------------------
+ *    - All requests contend on same AtomicInteger (CAS retries under high load)
+ *    - Single token bucket for ALL users - no per-user isolation
+ *    - Cannot set different limits for different users/API keys
+ *    - Cache line bouncing between CPU cores hurts performance
+ *    - CAS retry loop wastes CPU cycles under contention
+ *
+ *    For per-user rate limiting without lock contention, see:
+ *    StripedExecutorRateLimiter (Thread Confinement Pattern)
+ *    - Each user gets dedicated thread + token bucket
+ *    - No locks/atomics needed - single-threaded per user
+ *    - Zero contention even under high load for same user
+ *
  * Implements a thread-safe rate limiter using the token bucket algorithm.
  * Features:
  * - Precise rate limiting
