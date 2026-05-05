@@ -4,14 +4,14 @@
 
 ## At a Glance
 
-| Relationship  | Keyword      | Arrow (UML)        | Lifecycle Dependency | How to Initialise in Java                        | Example              |
-|---------------|--------------|--------------------|----------------------|--------------------------------------------------|----------------------|
-| Dependency    | uses         | `A - - -> B`       | None (transient)     | Pass B as a **method parameter**                 | OrderService uses EmailService per call |
-| Association   | uses-a       | `A ------> B`      | None (independent)   | Pass B via **constructor** (stored as field)     | Department holds Teacher |
-| Aggregation   | has-a (weak) | `A <>-----> B`     | B survives A         | Pass List\<B\> via **constructor** (shared ref)  | Team has Players |
-| Composition   | has-a (strong)| `A ◆-----> B`     | B dies with A        | **Create B inside A's constructor** (`new B()`)  | House creates its Rooms |
-| Realization   | implements   | `A - - -|> B`      | N/A (type contract)  | `class A implements B`                           | Circle implements Drawable |
-| Inheritance   | is-a         | `A ———|> B`        | N/A (class hierarchy)| `class A extends B`                              | Dog extends Animal |
+| Relationship | Keyword | UML Arrow | Lifecycle | Initialization (Java) | Senior / Staff Nuance |
+|--------------|---------|-----------|-----------|----------------------|----------------------|
+| Dependency | Uses-a | `- - ->` | Transient: B exists only during method execution. | Method Parameter: `void call(Service s)` | Use for stateless utilities or high-volatility objects. |
+| Association | Knows-a | `—————>` | Independent: A and B are peers; both exist before and after. | Constructor/Setter Injection: Stored as a field. | Avoid bi-directional association to prevent Circular Dependencies. |
+| Aggregation | Has-a (Weak) | `<>————>` | Independent: B survives if A is deleted (Shared Part). | Injection + Defensive Copy: `this.list = new ArrayList(in);` | Use Collections.unmodifiableList in getters to prevent state leakage. |
+| Composition | Has-a (Strong) | `◆—————>` | Dependent: B is owned by A; B dies when A dies. | Internal Creation: `this.part = new Part();` | If using DI for testing, ensure B is not shared with any other object. |
+| Realization | Implements | `- - -▷` | Contract: A fulfills the behavior defined by B. | `class A implements B` | Program to Interfaces, not Implementations (Dependency Inversion). |
+| Inheritance | Is-a | `—————▷` | Identity: A is a specialized version of B. | `class A extends B` | Prefer Composition over Inheritance to avoid the "Fragile Base Class" problem. |
 
 ---
 
@@ -98,9 +98,9 @@ class House {
 }
 ```
 
-> See `composition/` package — `FlyingFish` owns its `SwimBehavior`/`FlyBehavior` implementations internally,
-> while the *strategies* (BasicSwim, GlideFly) are injected → that's actually association / Strategy pattern.
-> True composition: `Engine` created inside `Car`'s constructor.
+> See `composition/car/` package for **true composition**: `Car` creates `Engine` internally via `new Engine()`.
+> See `composition/good/` package for **composition over inheritance** via Strategy pattern: `FlyingFish` injects
+> `SwimBehavior`/`FlyBehavior` — note that injection makes this technically association, not strict composition.
 
 ---
 

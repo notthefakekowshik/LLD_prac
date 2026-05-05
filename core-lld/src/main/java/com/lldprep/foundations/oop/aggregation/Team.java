@@ -4,16 +4,22 @@
 // Relationship: Team <>----> Player  (open diamond = aggregation)
 package com.lldprep.foundations.oop.aggregation;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Team {
 
     private final String teamName;
-    private final List<Player> players;   // aggregation — list passed in, not created here
+    private final List<Player> players;   // aggregation — defensive copy, not direct reference
 
     public Team(String teamName, List<Player> players) {
         this.teamName = teamName;
-        this.players = players;
+        this.players = new ArrayList<>(players);  // defensive copy — protects internal state
+    }
+
+    public List<Player> getPlayers() {
+        return Collections.unmodifiableList(players);  // prevent external mutation
     }
 
     public void startMatch() {

@@ -48,6 +48,23 @@ public class CompositionDemo {
         System.out.println("\nKey insight: BasicSwim exists in ONE place and is shared by both FlyingFish and Tuna.");
         System.out.println("Changing swim algorithm requires editing ONLY BasicSwim.");
 
+        System.out.println();
+
+        // --- TRUE COMPOSITION (Strict UML) ---
+        System.out.println("--- TRUE COMPOSITION: Car OWNS Engine internally ---");
+        System.out.println("Engine is created INSIDE Car's constructor. It cannot be swapped.");
+        System.out.println("When Car is destroyed, Engine is destroyed too.");
+
+        com.lldprep.foundations.oop.composition.car.Car sedan =
+            new com.lldprep.foundations.oop.composition.car.Car("Toyota Camry", "V6 Hybrid");
+        sedan.start();
+        sedan.stop();
+
+        System.out.println();
+        System.out.println("Key insight: Car does NOT accept Engine via constructor.");
+        System.out.println("Engine is created with 'new Engine()' inside Car's constructor.");
+        System.out.println("No setter, no swap — strict ownership. Relationship: Car ◆----> Engine");
+
         System.out.println("\n===== END COMPOSITION DEMO =====");
     }
 }
