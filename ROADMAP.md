@@ -100,6 +100,6 @@ These are full interview-style problems. Target 90–120 minutes per problem fol
 - [ ] **Snake and Ladder** — Board game with multiple players, pluggable dice, extensible for Chess pieces.
 - [ ] **Chess** — Board, pieces with movement rules, turn management, check detection.
 - [ ] **Vending Machine** — Product inventory, coin handling, state machine (Idle/HasCoin/Dispensing/OutOfStock).
-- [ ] **ATM Machine** — Card authentication, PIN validation, cash dispensing chain, transaction logging.
+- [x] **ATM Machine** — Card authentication, PIN validation, cash dispensing chain, transaction logging. ✓ *Completed 2026-05-06 (State Pattern, Chain of Responsibility, Strategy)*
 - [ ] **Hotel Management System** — Room types, booking lifecycle, housekeeping scheduling, billing.
 - [ ] **Library Management System** — Book catalog, member management, fine calculation, reservation queue.
