@@ -7,6 +7,48 @@ Use `PATTERNS_DECISION_TREE.md` to quickly pick the right pattern.
 
 ---
 
+## Design Patterns Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    23 GANG OF FOUR DESIGN PATTERNS                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐  ┌────────────┐ │
+│  │   CREATIONAL (5)      │  │   STRUCTURAL (6)      │  │ BEHAVIORAL │ │
+│  │   🔵 Object Creation  │  │   🟢 Object Assembly  │  │   (12)     │ │
+│  └─────────────────────────┘  └─────────────────────────┘  │🟠Object    │ │
+│              │                           │                   │ Interaction│ │
+│              ▼                           ▼                   └────────────┘ │
+│  ┌──────────────────┐      ┌──────────────────┐            │             │
+│  │  1. Singleton    │      │  1. Adapter      │            ▼             │
+│  │  2. Factory      │      │  2. Bridge       │      ┌──────────────┐    │
+│  │  3. Abs Factory  │      │  3. Decorator    │      │ 1. Strategy  │    │
+│  │  4. Builder      │      │  4. Facade       │      │ 2. Observer  │    │
+│  │  5. Prototype    │      │  5. Flyweight    │      │ 3. Command   │    │
+│  └──────────────────┘      │  6. Proxy        │      │ 4. State     │    │
+│                            └──────────────────┘      │ 5. Template  │    │
+│                                                      │ 6. Iterator  │    │
+│                                                      │ 7. Chain of  │    │
+│                                                      │    Resp.     │    │
+│                                                      │ 8. Mediator  │    │
+│                                                      │ 9. Memento   │    │
+│                                                      │ 10. Visitor  │    │
+│                                                      │ 11. Interpret│    │
+│                                                      └──────────────┘    │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Pattern Categories Explained
+
+| Category | Purpose | Think "..." |
+|----------|---------|-------------|
+| **Creational** | Control object creation | "How do I create this?" |
+| **Structural** | Compose objects into larger structures | "How do I assemble these?" |
+| **Behavioral** | Manage communication between objects | "How do they interact?" |
+
+---
+
 ## 1. Creational Patterns — The Birth of Objects
 
 These patterns control *how objects are created*, decoupling the caller from the concrete type.

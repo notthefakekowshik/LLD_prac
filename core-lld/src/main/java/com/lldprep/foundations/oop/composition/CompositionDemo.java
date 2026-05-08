@@ -1,52 +1,75 @@
 package com.lldprep.foundations.oop.composition;
 
-import com.lldprep.foundations.oop.composition.bad.FlyingFish;
+import com.lldprep.foundations.oop.composition.bad.TechLead;
 import com.lldprep.foundations.oop.composition.good.*;
 
+/**
+ * Demonstrates COMPOSITION over INHERITANCE using Employee roles.
+ *
+ * <p>Problem: An employee can have multiple responsibilities (coding, managing).
+ * Java doesn't allow multiple inheritance, so composition is the only clean solution.
+ */
 public class CompositionDemo {
 
     public static void main(String[] args) {
         System.out.println("===== COMPOSITION OVER INHERITANCE =====\n");
+        System.out.println("Scenario: Employees with different roles (Developer, Manager, Tech Lead)\n");
 
         // --- BAD VERSION ---
-        System.out.println("--- BAD: Swim and fly logic are copy-pasted into every class ---");
-        System.out.println("Problem: if swim() changes, every copy (FlyingFish, Tuna, Salmon...) must be updated.");
-        FlyingFish badFish = new FlyingFish("BadFlyingFish");
-        badFish.swim();
-        badFish.fly();
-        System.out.println("Also: Tuna would need its own copy of swim() — there's no safe way to share it.");
+        System.out.println("--- BAD: Work and management logic are copy-pasted ---");
+        System.out.println("Problem: if work() changes, every copy (Developer, TechLead, Manager...) must be updated.");
+        TechLead badTechLead = new TechLead("Alice");
+        badTechLead.work();
+        badTechLead.manage();
+        System.out.println("Also: Developer has identical work() code — maintenance nightmare.");
 
         System.out.println();
 
         // --- GOOD VERSION ---
         System.out.println("--- GOOD: Behaviours are composed via injection ---");
 
-        com.lldprep.foundations.oop.composition.good.FlyingFish goodFish =
-            new com.lldprep.foundations.oop.composition.good.FlyingFish(
-                "GoodFlyingFish", new BasicSwim(), new GlideFly());
+        // Developer: codes, doesn't manage
+        Employee developer = new Employee("Bob", "Developer",
+            new CodeWork(), new NoManage());
 
-        Tuna tuna = new Tuna("Tuna", new BasicSwim());
+        // Manager: plans, leads team
+        Employee manager = new Employee("Carol", "Manager",
+            new ReviewWork(), new LeadTeam());
 
-        goodFish.swim();
-        goodFish.fly();
+        // Tech Lead: codes AND leads team (composition allows both!)
+        Employee techLead = new Employee("Alice", "Tech Lead",
+            new CodeWork(), new LeadTeam());
 
-        tuna.swim();
-        tuna.fly(); // uses NoFly — no exception, no crash
+        developer.performWork();
+        developer.performManagement();
+        System.out.println();
+
+        manager.performWork();
+        manager.performManagement();
+        System.out.println();
+
+        techLead.performWork();
+        techLead.performManagement();
+
+        System.out.println();
+        System.out.println("Key insight: CodeWork exists in ONE place and is shared by Developer and TechLead.");
+        System.out.println("Changing coding standards requires editing ONLY CodeWork.");
 
         System.out.println();
 
         // --- RUNTIME BEHAVIOUR SWAP ---
-        System.out.println("--- RUNTIME SWAP: Swap FlyingFish to NoFly without changing FlyingFish class ---");
-        goodFish.setFlyBehavior(new NoFly());
-        goodFish.fly(); // now uses NoFly
+        System.out.println("--- RUNTIME SWAP: Bob promoted to Tech Lead ---");
+        System.out.println("Before: " + developer.getTitle());
+        developer.performManagement();
+
+        developer.setManageBehavior(new LeadTeam());  // Runtime promotion!
+        System.out.println("After promotion:");
+        developer.performManagement();
 
         System.out.println();
-        System.out.println("--- RUNTIME SWAP: Upgrade FlyingFish back to GlideFly ---");
-        goodFish.setFlyBehavior(new GlideFly());
-        goodFish.fly();
-
-        System.out.println("\nKey insight: BasicSwim exists in ONE place and is shared by both FlyingFish and Tuna.");
-        System.out.println("Changing swim algorithm requires editing ONLY BasicSwim.");
+        System.out.println("--- RUNTIME SWAP: Tech Lead becomes pure Manager ---");
+        techLead.setWorkBehavior(new ReviewWork());  // Stop coding, focus on planning
+        techLead.performWork();
 
         System.out.println();
 

@@ -100,7 +100,7 @@ public class OrderBook {
 
             buy.fill(fillQty);
             resting.fill(fillQty);
-            listener.onTrade(new MatchResult(symbol, buy.getId(), resting.getId(), bestAskPrice, fillQty));
+            listener.onTrade(new MatchResult(symbol, buy.getId(), resting.getId(), priceToCents(bestAskPrice), fillQty));
 
             if (resting.getRemainingQty() == 0) {
                 entry.getValue().pollFirst();
@@ -125,7 +125,7 @@ public class OrderBook {
 
             sell.fill(fillQty);
             resting.fill(fillQty);
-            listener.onTrade(new MatchResult(symbol, resting.getId(), sell.getId(), bestBidPrice, fillQty));
+            listener.onTrade(new MatchResult(symbol, resting.getId(), sell.getId(), priceToCents(bestBidPrice), fillQty));
 
             if (resting.getRemainingQty() == 0) {
                 entry.getValue().pollFirst();
@@ -138,6 +138,10 @@ public class OrderBook {
 
     private void addToBook(NavigableMap<Double, Deque<Order>> side, double price, Order order) {
         side.computeIfAbsent(price, k -> new ArrayDeque<>()).addLast(order);
+    }
+
+    private long priceToCents(double price) {
+        return Math.round(price * 100);
     }
 
     private void removeFromBook(Order order) {
