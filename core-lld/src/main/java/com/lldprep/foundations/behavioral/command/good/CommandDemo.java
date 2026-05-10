@@ -56,7 +56,7 @@ public class CommandDemo {
         editor.execute(new TypeCommand(doc, "Hello"));
         editor.execute(new TypeCommand(doc, " World"));
         editor.undo();   // removes " World"
-        editor.redo();   // puts " World" back
+//        editor.redo();   // puts " World" back
         editor.undo();   // removes " World" again
         editor.undo();   // removes "Hello"
         editor.undo();   // nothing to undo
