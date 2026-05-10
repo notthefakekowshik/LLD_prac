@@ -171,6 +171,254 @@ public class CompletableFutureExample {
 
 ---
 
+## 3.1 CompletableFuture — Full API Reference
+
+The methods in Section 3 cover the *categories*. This section is the **complete method inventory** — every method you'll encounter, grouped by purpose, with usage frequency ratings.
+
+### Creation (Starting a pipeline)
+
+| Method | Returns | Use Case | Frequency |
+| :--- | :--- | :--- | :--- |
+| `supplyAsync(Supplier)` | `CF<T>` | Run task, return result | ✅ Most common |
+| `supplyAsync(Supplier, Executor)` | `CF<T>` | Same, but on your executor (recommended for I/O) | ✅ Production must-use |
+| `runAsync(Runnable)` | `CF<Void>` | Fire-and-forget task, no result | ✅ Common |
+| `runAsync(Runnable, Executor)` | `CF<Void>` | Same, on your executor | ✅ Common |
+| `completedFuture(value)` | `CF<T>` | Wrap an already-known value (testing, caching, early-return) | ✅ Common |
+| `failedFuture(ex)` | `CF<T>` | Wrap an already-known error (Java 9+) | ✅ Common |
+| `new CompletableFuture<>()` | `CF<T>` | Empty future — complete later via `complete()`/`completeExceptionally()` | ✅ Custom async APIs |
+| `delayedExecutor(delay, unit)` | `Executor` | Creates an executor that delays task start (Java 9+) | 🟡 Niche |
+| `delayedExecutor(delay, unit, executor)` | `Executor` | Same, wrapping your executor | 🟡 Niche |
+
+```java
+// completedFuture — useful for cache hits, default values, testing
+public CompletableFuture<User> findUser(String id) {
+    User cached = cache.get(id);
+    if (cached != null) return CompletableFuture.completedFuture(cached);
+    return CompletableFuture.supplyAsync(() -> db.findUser(id), dbExecutor);
+}
+
+// failedFuture — useful for validation failures before any async work
+public CompletableFuture<Order> placeOrder(Order order) {
+    if (order.getItems().isEmpty()) {
+        return CompletableFuture.failedFuture(new IllegalArgumentException("Empty order"));
+    }
+    return CompletableFuture.supplyAsync(() -> orderService.save(order), executor);
+}
+
+// Manual completion — bridging callback-based APIs to CompletableFuture
+CompletableFuture<String> cf = new CompletableFuture<>();
+legacyAsyncClient.fetch(url, new Callback() {
+    @Override public void onSuccess(String result) { cf.complete(result); }
+    @Override public void onFailure(Exception e)   { cf.completeExceptionally(e); }
+});
+return cf;  // callers chain on this like any other CF
+```
+
+### Transform (1 → 1 mapping — the workhorse methods)
+
+| Method | Signature | What It Does | Analogy | Frequency |
+| :--- | :--- | :--- | :--- | :--- |
+| `thenApply` | `Function<T, U>` | Transform result: `T → U` | `Stream.map()` | ✅ **Most used** |
+| `thenAccept` | `Consumer<T>` | Consume result, return `CF<Void>` | `Stream.forEach()` | ✅ Very common |
+| `thenRun` | `Runnable` | Run action after completion, ignore result | "do this when done" | ✅ Common |
+
+```java
+CompletableFuture.supplyAsync(() -> fetchUser(id))
+    .thenApply(user -> user.getName().toUpperCase())   // transform: User → String
+    .thenAccept(name -> log.info("Processed: {}", name)) // consume: terminal
+    .thenRun(() -> metrics.incrementProcessed());         // side-effect: fire-and-forget
+```
+
+### Chain / FlatMap (dependent async steps)
+
+| Method | Signature | What It Does | Analogy | Frequency |
+| :--- | :--- | :--- | :--- | :--- |
+| `thenCompose` | `Function<T, CF<U>>` | Chain dependent futures — **this is flatMap** | `Stream.flatMap()` | ✅ **Critical** |
+
+**This is the #1 method people miss.** Without it you get `CF<CF<T>>` (nested futures):
+
+```java
+// ❌ WRONG — thenApply with an async function gives CF<CF<Order>>
+CompletableFuture<CompletableFuture<List<Order>>> nested =
+    fetchUser(id).thenApply(user -> fetchOrders(user.getId()));
+
+// ✅ RIGHT — thenCompose flattens to CF<List<Order>>
+CompletableFuture<List<Order>> flat =
+    fetchUser(id).thenCompose(user -> fetchOrders(user.getId()));
+```
+
+**Rule of thumb:**
+- If your lambda returns a **plain value** → use `thenApply` (map)
+- If your lambda returns a **CompletableFuture** → use `thenCompose` (flatMap)
+
+### Combine (independent parallel futures)
+
+| Method | Signature | What It Does | Frequency |
+| :--- | :--- | :--- | :--- |
+| `thenCombine` | `CF<U>, BiFunction<T, U, V>` | Run 2 futures in parallel, combine results | ✅ Very common |
+| `thenAcceptBoth` | `CF<U>, BiConsumer<T, U>` | Like `thenCombine` but returns `CF<Void>` | 🟡 Less common |
+| `runAfterBoth` | `CF<?>, Runnable` | Run action when both complete, ignore results | 🟡 Rare |
+| `allOf` | `CF<?>...` | Wait for ALL to complete (returns `CF<Void>`) | ✅ **Very common** |
+| `anyOf` | `CF<?>...` | Complete when FIRST completes | ✅ Common (racing/timeout) |
+
+```java
+// thenCombine — two independent calls in parallel, combine when both done
+CompletableFuture<String> userFuture    = supplyAsync(() -> fetchUser(id));
+CompletableFuture<String> productFuture = supplyAsync(() -> fetchProduct(pid));
+
+CompletableFuture<String> combined = userFuture.thenCombine(productFuture,
+    (user, product) -> user + " bought " + product);
+
+// allOf — fan-out N parallel tasks, collect results
+List<CompletableFuture<Price>> priceFutures = suppliers.stream()
+    .map(s -> supplyAsync(() -> s.getPrice(item)))
+    .toList();
+
+CompletableFuture<Void> all = CompletableFuture.allOf(
+    priceFutures.toArray(new CompletableFuture[0]));
+
+// allOf returns CF<Void>, so you extract results after join:
+CompletableFuture<List<Price>> allPrices = all.thenApply(v ->
+    priceFutures.stream()
+        .map(CompletableFuture::join)  // safe here — all are already complete
+        .toList());
+
+// anyOf — first-wins pattern (e.g., race multiple mirrors, use fastest)
+CompletableFuture<Object> fastest = CompletableFuture.anyOf(
+    supplyAsync(() -> fetchFromMirror1()),
+    supplyAsync(() -> fetchFromMirror2()),
+    supplyAsync(() -> fetchFromMirror3()));
+```
+
+### Either (first-to-complete of two)
+
+| Method | What It Does | Frequency |
+| :--- | :--- | :--- |
+| `applyToEither(CF, Function)` | Transform result of whichever completes first | 🟡 Niche |
+| `acceptEither(CF, Consumer)` | Consume result of whichever completes first | 🟡 Niche |
+| `runAfterEither(CF, Runnable)` | Run action when either completes | 🟡 Rare |
+
+```java
+// Race two sources — use whichever responds first
+CompletableFuture<String> result = primaryDb.query(sql)
+    .applyToEither(replicaDb.query(sql), Function.identity());
+```
+
+### Error Handling
+
+| Method | Signature | What It Does | Analogy | Frequency |
+| :--- | :--- | :--- | :--- | :--- |
+| `exceptionally` | `Function<Throwable, T>` | Catch exception, return fallback | `catch` block | ✅ **Most used** |
+| `handle` | `BiFunction<T, Throwable, U>` | Always called — result OR exception | `try-finally` | ✅ Common |
+| `whenComplete` | `BiConsumer<T, Throwable>` | Side-effect (logging), doesn't transform result | Observer/listener | ✅ Common |
+| `exceptionallyCompose` | `Function<Throwable, CF<T>>` | Catch + fallback to another async call (Java 12+) | `catch` with async retry | 🟡 Useful |
+
+```java
+// exceptionally — return a default on failure
+CompletableFuture<String> safe = fetchData()
+    .exceptionally(ex -> {
+        log.warn("Fetch failed: {}", ex.getMessage());
+        return "DEFAULT";
+    });
+
+// handle — unified processing (always called, result OR exception)
+CompletableFuture<Response> response = callService()
+    .handle((result, ex) -> {
+        if (ex != null) {
+            return Response.error(ex.getMessage());
+        }
+        return Response.ok(result);
+    });
+
+// whenComplete — observe without transforming (great for logging/metrics)
+fetchUser(id)
+    .whenComplete((user, ex) -> {
+        if (ex != null) metrics.incrementFailure();
+        else metrics.incrementSuccess();
+    })
+    .thenApply(user -> toDto(user));  // pipeline continues unchanged
+
+// exceptionallyCompose — async fallback (Java 12+)
+fetchFromPrimary()
+    .exceptionallyCompose(ex -> fetchFromBackup());  // fallback is also async
+```
+
+### Async Variants — The `*Async` Twins
+
+**Every** `then*` method has an `Async` version that forces execution on a different thread:
+
+| Non-Async | Async | Async + Executor |
+| :--- | :--- | :--- |
+| `thenApply` | `thenApplyAsync` | `thenApplyAsync(fn, executor)` |
+| `thenAccept` | `thenAcceptAsync` | `thenAcceptAsync(fn, executor)` |
+| `thenRun` | `thenRunAsync` | `thenRunAsync(fn, executor)` |
+| `thenCompose` | `thenComposeAsync` | `thenComposeAsync(fn, executor)` |
+| `thenCombine` | `thenCombineAsync` | `thenCombineAsync(cf, fn, executor)` |
+| `handle` | `handleAsync` | `handleAsync(fn, executor)` |
+| `whenComplete` | `whenCompleteAsync` | `whenCompleteAsync(fn, executor)` |
+| `exceptionally` | `exceptionallyAsync` | `exceptionallyAsync(fn, executor)` (Java 12+) |
+
+**When to use `*Async`?**
+- The **non-async** version runs on whatever thread completed the previous stage (often a ForkJoinPool worker). Cheap for lightweight transforms.
+- Use **`*Async`** when the transformation is heavy (CPU-bound) or you need to control which thread pool runs it (e.g., I/O work on `boundedElastic`, compute on a dedicated pool).
+
+```java
+// Non-async: toUpperCase() is trivial, no need for a thread hop
+cf.thenApply(s -> s.toUpperCase());
+
+// Async: heavy processing, run on dedicated pool
+cf.thenApplyAsync(data -> expensiveComputation(data), computePool);
+```
+
+### Timeout Support (Java 9+)
+
+| Method | What It Does | Frequency |
+| :--- | :--- | :--- |
+| `orTimeout(long, TimeUnit)` | Fails with `TimeoutException` if not complete in time | ✅ Common |
+| `completeOnTimeout(value, long, TimeUnit)` | Completes with default value if not done in time | ✅ Common |
+
+```java
+// Fail with TimeoutException after 5 seconds
+CompletableFuture<String> result = callSlowService()
+    .orTimeout(5, TimeUnit.SECONDS);
+
+// Return a default instead of failing
+CompletableFuture<String> result = callSlowService()
+    .completeOnTimeout("CACHED_DEFAULT", 5, TimeUnit.SECONDS);
+```
+
+### Result Retrieval
+
+| Method | Blocks? | What It Does | Frequency |
+| :--- | :--- | :--- | :--- |
+| `get()` | ✅ Blocks | Returns result or throws checked `ExecutionException` | 🟡 Avoid in async code |
+| `get(timeout, unit)` | ✅ Blocks (with timeout) | Same + `TimeoutException` | 🟡 Acceptable in tests |
+| `join()` | ✅ Blocks | Same as `get()` but throws unchecked `CompletionException` | ✅ Preferred over `get()` |
+| `getNow(defaultValue)` | ❌ Non-blocking | Returns result if done, else default | 🟡 Polling |
+| `resultNow()` | ❌ Non-blocking | Returns result if done, else throws (Java 19+) | 🟡 Niche |
+| `exceptionNow()` | ❌ Non-blocking | Returns exception if failed (Java 19+) | 🟡 Niche |
+
+**Rule:** In async pipelines, prefer `thenApply`/`thenAccept`/`subscribe` over `get()`/`join()`. Only use `join()` at the outermost boundary (e.g., `main()`, test assertions, or inside `allOf().thenApply()`).
+
+### The "Top 8" — 95% of Production Usage
+
+These 8 methods cover the vast majority of real-world `CompletableFuture` code:
+
+| # | Method | Role | Mental Model |
+| :--- | :--- | :--- | :--- |
+| 1 | `supplyAsync` | Start an async task that returns a value | "kick off work" |
+| 2 | `thenApply` | Transform the result | `map` |
+| 3 | `thenCompose` | Chain dependent async calls | `flatMap` |
+| 4 | `thenAccept` | Consume the final result | `forEach` |
+| 5 | `exceptionally` | Error fallback | `catch` |
+| 6 | `thenCombine` | Combine 2 parallel results | `zip` |
+| 7 | `allOf` | Wait for N parallel results | `Promise.all()` |
+| 8 | `handle` | Unified success/error processing | `try-finally` |
+
+Everything else in this section is a variant of these 8.
+
+---
+
 ## 4. The Successors: Beyond `CompletableFuture`
 
 `CompletableFuture` solved a lot, but it still has pain points at scale:

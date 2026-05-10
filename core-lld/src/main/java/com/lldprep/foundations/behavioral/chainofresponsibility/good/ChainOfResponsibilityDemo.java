@@ -1,125 +1,199 @@
 package com.lldprep.foundations.behavioral.chainofresponsibility.good;
 
+import java.math.BigDecimal;
+
 /**
- * Chain of Responsibility Pattern — Demo
+ * Chain of Responsibility Pattern — Request Approval Workflow Demo
  *
  * <p><b>What problem does it solve?</b><br>
- * Multiple handlers may process a request, but the sender shouldn't need to know which one.
- * Without CoR, the sender must contain hard if-else logic to route requests to the right handler.
- * Adding a new handler requires editing the sender — OCP violation.
+ * Approval workflows where different amounts require different levels of approval.
+ * Without CoR, you'd need complex if-else logic to determine who should approve.
+ * Adding a new approval level requires editing multiple classes — OCP violation.
  *
  * <p><b>How it works:</b><br>
- * - Each handler knows its threshold and holds a reference to the next handler in the chain.<br>
- * - When a request arrives, the handler processes it if eligible, then passes it to the next handler.<br>
- * - The chain is assembled by the client — handlers are completely independent of each other.<br>
- * - Adding a new handler = new class + one line to insert it in the chain. Zero existing changes.
+ * - Each handler knows its approval limit and can decide to approve/reject.<br>
+ * - Chain continues until: (a) someone rejects, or (b) all necessary approvals obtained.<br>
+ * - If rejected: chain stops immediately, user knows who rejected and why.<br>
+ * - If all approve: user gets list of all who approved.
  *
- * <p><b>Important design note — two styles:</b><br>
+ * <p><b>Approval Rules in this demo:</b>
  * <ul>
- *   <li><b>Pass-and-process</b> (used here): every eligible handler in the chain processes the
- *       request. An ERROR log is written to console, file, AND email.</li>
- *   <li><b>Stop-on-first</b>: the first matching handler processes it and the chain stops.
- *       Used in authentication pipelines, approval workflows.</li>
+ *   <li>≤ ₹2,000: Manager only</li>
+ *   <li>₹2,001 - ₹10,000: Manager + Director</li>
+ *   <li>₹10,001 - ₹50,000: Manager + Director + VP</li>
+ *   <li>₹50,001+: Manager + Director + VP + CEO</li>
  * </ul>
  *
  * <p><b>When to use:</b>
  * <ul>
- *   <li>Multiple handlers may process a request, and the handler isn't known until runtime.</li>
- *   <li>You want to avoid hardcoded routing logic in the sender.</li>
- *   <li>Building middleware pipelines, log handlers, approval workflows, auth filters.</li>
+ *   <li>Multi-level approval workflows (expenses, purchases, leave requests).</li>
+ *   <li>Request routing based on amount/urgency/type.</li>
+ *   <li>Any workflow where multiple decision makers must approve/reject.</li>
  * </ul>
  *
- * <p><b>Gotcha:</b> CoR has no guarantee a request is handled — always add a default/fallback
- * handler at the end of the chain for unhandled cases.
- *
- * <p><b>Covered variations:</b>
- * <ol>
- *   <li>Pass-and-process (all eligible handlers run)</li>
- *   <li>Chain reconfiguration at runtime (different chain for prod vs dev)</li>
- *   <li>Evolve: adding a new handler without touching existing ones</li>
- * </ol>
+ * <p><b>Key insight:</b> This is "Stop-on-first-reject" style where each handler
+ * must approve for the chain to continue. Contrast with "Pass-and-process" where
+ * all handlers process the same request (like the logging example).
  */
 public class ChainOfResponsibilityDemo {
 
     public static void main(String[] args) {
-        demo1_LogChain();
-        demo2_RuntimeChainReconfiguration();
-        demo3_EvolveAddNewHandler();
+        section("╔════════════════════════════════════════════════════════════╗");
+        section("║    CHAIN OF RESPONSIBILITY — REQUEST APPROVAL WORKFLOW     ║");
+        section("╚════════════════════════════════════════════════════════════╝");
+
+        ApprovalChain chain = new ApprovalChain();
+
+        demo1_SimpleApproval(chain);
+        demo2_MultiLevelApproval(chain);
+        demo3_RejectionStopsChain(chain);
+        demo4_BorderlineAmounts(chain);
+        demo5_EdgeCases(chain);
+
+        section("╔════════════════════════════════════════════════════════════╗");
+        section("║                      DEMO COMPLETE                         ║");
+        section("╚════════════════════════════════════════════════════════════╝");
     }
 
     // -------------------------------------------------------------------------
+    // DEMO 1: Simple approval - only Manager needed
+    // -------------------------------------------------------------------------
+    private static void demo1_SimpleApproval(ApprovalChain chain) {
+        section("Demo 1: Simple Approval (₹1,500 — Manager only)");
 
-    private static void demo1_LogChain() {
-        section("Demo 1: Log chain — each level triggers a different set of handlers");
+        ApprovalRequest request = new ApprovalRequest(
+            "Alice Chen",
+            new BigDecimal("1500"),
+            "Team lunch for Q2 celebration"
+        );
 
-        LogHandler chain = buildProductionChain();
-
-        System.out.println("\n  -- Sending DEBUG --");
-        chain.handle(LogLevel.DEBUG, "Cache miss for key 'user:42'");
-
-        System.out.println("\n  -- Sending WARN --");
-        chain.handle(LogLevel.WARN, "Response time > 2s on /checkout");
-
-        System.out.println("\n  -- Sending ERROR --");
-        chain.handle(LogLevel.ERROR, "Payment service unreachable");
-    }
-
-    private static void demo2_RuntimeChainReconfiguration() {
-        section("Demo 2: Dev chain (no email alerts — only console output)");
-
-        // Dev environment: only console, no file/email noise
-        LogHandler devChain = new ConsoleHandler();
-
-        devChain.handle(LogLevel.ERROR, "NullPointerException in UserService");
-        // Only console — no file write, no email sent
-    }
-
-    private static void demo3_EvolveAddNewHandler() {
-        section("Demo 3: Evolve — add SMSHandler for ERROR without touching existing handlers");
-
-        LogHandler console = new ConsoleHandler();
-        LogHandler file    = new FileHandler();
-        LogHandler email   = new EmailAlertHandler("oncall@company.com");
-        LogHandler sms     = new SMSHandler("+91-9999999999"); // NEW handler
-
-        // Insert SMS into the chain — zero changes to other handlers
-        console.setNext(file).setNext(email).setNext(sms);
-
-        System.out.println();
-        console.handle(LogLevel.ERROR, "Database connection pool exhausted");
+        ApprovalResult result = chain.processRequest(request);
+        assert result.isFullyApproved() : "Should be fully approved";
+        assert result.getApprovedBy().size() == 1 : "Only Manager should approve";
+        System.out.println("✓ PASS: Single-level approval works\n");
     }
 
     // -------------------------------------------------------------------------
+    // DEMO 2: Multi-level approval - Manager + Director
+    // -------------------------------------------------------------------------
+    private static void demo2_MultiLevelApproval(ApprovalChain chain) {
+        section("Demo 2: Multi-Level Approval (₹5,000 — Manager + Director)");
 
-    private static LogHandler buildProductionChain() {
-        LogHandler console = new ConsoleHandler();
-        LogHandler file    = new FileHandler();
-        LogHandler email   = new EmailAlertHandler("oncall@company.com");
+        ApprovalRequest request = new ApprovalRequest(
+            "Bob Kumar",
+            new BigDecimal("5000"),
+            "New development workstation and monitors"
+        );
 
-        // Fluent chain assembly: console → file → email
-        console.setNext(file).setNext(email);
-        return console; // return head of chain
+        ApprovalResult result = chain.processRequest(request);
+        assert result.isFullyApproved() : "Should be fully approved";
+        assert result.getApprovedBy().size() == 2 : "Manager and Director should approve";
+        System.out.println("✓ PASS: Multi-level approval works\n");
+    }
+
+    // -------------------------------------------------------------------------
+    // DEMO 3: Rejection stops chain immediately
+    // -------------------------------------------------------------------------
+    private static void demo3_RejectionStopsChain(ApprovalChain chain) {
+        section("Demo 3: Rejection Stops Chain (₹666 — Manager rejects)");
+
+        // ₹666 is "unlucky number" in our demo - Manager auto-rejects
+        ApprovalRequest request = new ApprovalRequest(
+            "Charlie Smith",
+            new BigDecimal("666"),
+            "Office supplies"
+        );
+
+        ApprovalResult result = chain.processRequest(request);
+        assert result.isRejected() : "Should be rejected";
+        assert "Manager (Team Lead)".equals(result.getRejectedBy()) : "Manager should reject";
+        assert result.getApprovedBy().isEmpty() : "No approvals before rejection";
+        System.out.println("✓ PASS: Rejection stops chain immediately\n");
+
+        // Another rejection: personal expense
+        section("Demo 3b: Rejection for Policy Violation (Personal expense)");
+
+        ApprovalRequest request2 = new ApprovalRequest(
+            "Diana Prince",
+            new BigDecimal("3000"),
+            "Personal gym membership"
+        );
+
+        ApprovalResult result2 = chain.processRequest(request2);
+        assert result2.isRejected() : "Should be rejected for personal expense";
+        System.out.println("✓ PASS: Policy violation detected and rejected\n");
+    }
+
+    // -------------------------------------------------------------------------
+    // DEMO 4: Borderline amounts - test threshold logic
+    // -------------------------------------------------------------------------
+    private static void demo4_BorderlineAmounts(ApprovalChain chain) {
+        section("Demo 4: Borderline Amounts");
+
+        // Exactly ₹2,000 - Manager only (at threshold)
+        System.out.println("--- ₹2,000 (at Manager threshold) ---");
+        ApprovalResult r1 = chain.processRequest(new ApprovalRequest(
+            "Eve Adams", new BigDecimal("2000"), "Training materials"
+        ));
+        System.out.println("Approved by: " + r1.getApprovedBy());
+        assert r1.getApprovedBy().size() == 1 : "Exactly at threshold = Manager only";
+
+        // ₹2,001 - triggers Director approval (just over threshold)
+        System.out.println("\n--- ₹2,001 (just over Manager single-level limit) ---");
+        ApprovalResult r2 = chain.processRequest(new ApprovalRequest(
+            "Frank Lee", new BigDecimal("2001"), "Software license renewal"
+        ));
+        System.out.println("Approved by: " + r2.getApprovedBy());
+        assert r2.getApprovedBy().size() == 2 : "Over threshold = Manager + Director";
+
+        // ₹10,000 - at Director threshold, needs VP
+        System.out.println("\n--- ₹10,001 (triggers VP approval) ---");
+        ApprovalResult r3 = chain.processRequest(new ApprovalRequest(
+            "Grace Ho", new BigDecimal("10001"), "Q3 client event sponsorship"
+        ));
+        System.out.println("Approved by: " + r3.getApprovedBy());
+        assert r3.getApprovedBy().size() == 3 : "Needs Manager + Director + VP";
+
+        System.out.println("\n✓ PASS: Borderline amounts handled correctly\n");
+    }
+
+    // -------------------------------------------------------------------------
+    // DEMO 5: Edge cases - high amounts, rejections at different levels
+    // -------------------------------------------------------------------------
+    private static void demo5_EdgeCases(ApprovalChain chain) {
+        section("Demo 5: Edge Cases");
+
+        // High amount requiring CEO approval
+        System.out.println("--- ₹75,000 (requires CEO approval) ---");
+        ApprovalResult r1 = chain.processRequest(new ApprovalRequest(
+            "Henry Ford", new BigDecimal("75000"), "Critical infrastructure upgrade for revenue system"
+        ));
+        System.out.println("Approved by: " + r1.getApprovedBy());
+        assert r1.isFullyApproved() : "Should get all approvals including CEO";
+        assert r1.getApprovedBy().size() == 4 : "Manager + Director + VP + CEO";
+
+        // Director rejection - insufficient purpose description
+        System.out.println("\n--- ₹8,000 (Director rejects - short description) ---");
+        ApprovalResult r2 = chain.processRequest(new ApprovalRequest(
+            "Ivy Wong", new BigDecimal("8000"), "Stuff"  // Too short!
+        ));
+        assert r2.isRejected() : "Should be rejected for short description";
+        assert "Director (Department Head)".equals(r2.getRejectedBy()) : "Director should reject";
+        assert r2.getApprovedBy().size() == 1 : "Only Manager approved before rejection";
+
+        // VP rejection - no business justification
+        System.out.println("\n--- ₹30,000 (VP rejects - no business justification) ---");
+        ApprovalResult r3 = chain.processRequest(new ApprovalRequest(
+            "Jack Ma", new BigDecimal("30000"), "Team morale activities and fun events"  // No biz keywords
+        ));
+        assert r3.isRejected() : "Should be rejected for lack of business justification";
+        assert "VP (Vice President)".equals(r3.getRejectedBy()) : "VP should reject";
+
+        System.out.println("\n✓ PASS: Edge cases handled correctly\n");
     }
 
     private static void section(String title) {
-        System.out.println("\n=== " + title + " ===");
-    }
-
-    // -------------------------------------------------------------------------
-    // Evolve step: new handler added without touching any existing class
-    // -------------------------------------------------------------------------
-
-    static class SMSHandler extends LogHandler {
-        private final String phoneNumber;
-
-        SMSHandler(String phoneNumber) {
-            super(LogLevel.ERROR);
-            this.phoneNumber = phoneNumber;
-        }
-
-        @Override
-        protected void write(LogLevel level, String message) {
-            System.out.println("  [SMS    ][" + level + "] Texting " + phoneNumber + ": " + message);
-        }
+        System.out.println(title);
     }
 }
+
