@@ -2,6 +2,7 @@ package com.lldprep.systems.atm.demo;
 
 import com.lldprep.systems.atm.ATM;
 import com.lldprep.systems.atm.exception.*;
+import com.lldprep.systems.atm.exception.InvalidPINException;
 import com.lldprep.systems.atm.model.enums.AccountType;
 import com.lldprep.systems.atm.model.enums.Denomination;
 import com.lldprep.systems.atm.model.enums.TransactionType;
@@ -49,6 +50,9 @@ public class ATMDemo {
 
         // Scenario 9: Complex withdrawal with mixed denominations
         runScenario9_ComplexWithdrawal(atm);
+
+        // Scenario 10: Failed PIN attempts reset with new card
+        runScenario10_FailedPinAttemptsReset(atm);
 
         // Final summary
         printSummary(atm);
@@ -265,6 +269,112 @@ public class ATMDemo {
             }
             
             System.out.println("✓ Complex withdrawal completed");
+            
+        } catch (ATMException e) {
+            System.out.println("✗ Error: " + e.getMessage());
+        }
+        System.out.println();
+    }
+
+    private static void runScenario10_FailedPinAttemptsReset(ATM atm) {
+        printScenarioHeader("Scenario 10: Failed PIN Attempts Reset With New Card");
+        System.out.println("Demonstrates: failedPinAttempts resets when card is ejected,");
+        System.out.println("allowing a new user with a different card to start fresh.");
+        System.out.println();
+        
+        // Step 1: First user fails PIN twice, then cancels
+        System.out.println("--- Step 1: First user (Card A: 1234-5678-9012-3456) ---");
+        try {
+            atm.insertCard("1234-5678-9012-3456");
+            
+            // Wrong PIN attempt 1
+            try {
+                atm.enterPIN("9999");
+            } catch (InvalidPINException e) {
+                System.out.println("Attempt 1: " + e.getMessage());
+            }
+            
+            // Wrong PIN attempt 2
+            try {
+                atm.enterPIN("8888");
+            } catch (InvalidPINException e) {
+                System.out.println("Attempt 2: " + e.getMessage());
+            }
+            
+            System.out.println("User gives up and cancels...");
+            atm.cancel(); // This ejects card and resets failedPinAttempts to 0
+            
+        } catch (ATMException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+        System.out.println();
+        
+        // Step 2: New user with different card - should work fine (failedPinAttempts is 0)
+        System.out.println("--- Step 2: New user (Card B: 9876-5432-1098-7654) ---");
+        System.out.println("(Card A had 2 failed attempts, but counter is now reset to 0)");
+        
+        // Unblock card from scenario 4 if it was blocked
+        try {
+            atm.getCardManager().unblockCard("9876-5432-1098-7654");
+        } catch (Exception e) {
+            // Ignore - card might already be unblocked
+        }
+        
+        try {
+            atm.insertCard("9876-5432-1098-7654");
+            atm.enterPIN("4321"); // Correct PIN
+            atm.selectAccount(AccountType.CHECKING);
+            atm.performTransaction(TransactionType.BALANCE_INQUIRY, null);
+            atm.cancel();
+            
+            System.out.println("✓ New user's transaction completed successfully!");
+            System.out.println("  (failedPinAttempts was reset to 0 when Card A was ejected)");
+            
+        } catch (ATMException e) {
+            System.out.println("✗ Error: " + e.getMessage());
+        }
+        System.out.println();
+        
+        // Step 3: Show that blocked card's counter also resets after ejection
+        System.out.println("--- Step 3: Card gets blocked, then new card works ---");
+        
+        // Unblock the card from scenario 4 if needed, so we can use it again
+        try {
+            atm.getCardManager().unblockCard("9876-5432-1098-7654");
+        } catch (Exception e) {
+            // Ignore
+        }
+        
+        try {
+            atm.insertCard("9876-5432-1098-7654");
+            
+            // 3 wrong PIN attempts - card will be blocked and ejected
+            for (int i = 1; i <= 3; i++) {
+                try {
+                    atm.enterPIN("000" + i); // Wrong PINs: 0001, 0002, 0003
+                } catch (InvalidPINException e) {
+                    System.out.println("Attempt " + i + ": " + e.getMessage());
+                    if (i == 3) {
+                        System.out.println("  → Card blocked and ejected (failedPinAttempts resets to 0)");
+                    }
+                }
+            }
+        } catch (ATMException e) {
+            System.out.println("Card blocked: " + e.getMessage());
+        }
+        System.out.println();
+        
+        // Now use a working card - should work because counter was reset
+        System.out.println("--- Step 4: Another new user after blocked card ---");
+        try {
+            atm.insertCard("1234-5678-9012-3456");
+            atm.enterPIN("1234"); // Correct PIN
+            atm.selectAccount(AccountType.SAVINGS);
+            atm.performTransaction(TransactionType.BALANCE_INQUIRY, null);
+            atm.cancel();
+            
+            System.out.println("✓ Transaction successful after blocked card was ejected!");
+            System.out.println("  (ATM.resetSession() sets failedPinAttempts = 0 on ejectCard())");
             
         } catch (ATMException e) {
             System.out.println("✗ Error: " + e.getMessage());
