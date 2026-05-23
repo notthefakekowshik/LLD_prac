@@ -31,6 +31,9 @@ public class CashInventory {
             throw new IllegalArgumentException("Cannot add negative count");
         }
         inventory.merge(denomination, count, Integer::sum);
+        // or. We already initialised all denominations to 0, so need not check if it's already present. So, can it be put like this? inventory.put(denomination, inventory.get(denomination) + count);
+//        int currentCount = inventory.getOrDefault(denomination, 0);
+//        inventory.put(denomination, currentCount + count);
     }
 
     /**

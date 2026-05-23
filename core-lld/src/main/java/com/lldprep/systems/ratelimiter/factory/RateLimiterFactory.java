@@ -37,21 +37,15 @@ public class RateLimiterFactory {
         if (config == null) {
             throw new IllegalArgumentException("Config cannot be null");
         }
-        
-        switch (algorithmType) {
-            case TOKEN_BUCKET:
-                return createTokenBucket(config);
-            case LEAKY_BUCKET:
-                return createLeakyBucket(config);
-            case FIXED_WINDOW:
-                return createFixedWindow(config);
-            case SLIDING_WINDOW_LOG:
-                return createSlidingWindowLog(config);
-            case SLIDING_WINDOW_COUNTER:
-                return createSlidingWindowCounter(config);
-            default:
-                throw new IllegalArgumentException("Unknown algorithm type: " + algorithmType);
-        }
+
+        return switch (algorithmType) {
+            case TOKEN_BUCKET -> createTokenBucket(config);
+            case LEAKY_BUCKET -> createLeakyBucket(config);
+            case FIXED_WINDOW -> createFixedWindow(config);
+            case SLIDING_WINDOW_LOG -> createSlidingWindowLog(config);
+            case SLIDING_WINDOW_COUNTER -> createSlidingWindowCounter(config);
+            default -> throw new IllegalArgumentException("Unknown algorithm type: " + algorithmType);
+        };
     }
     
     /**
