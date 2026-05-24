@@ -6,260 +6,190 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Demonstrates the Striped Executor Rate Limiter pattern.
+ * Demonstrates the Striped Executor Rate Limiter with pluggable algorithms.
  *
- * COMPARISON: Traditional vs Striped Executor Rate Limiting
- * =========================================================
+ * The striped executor pattern is orthogonal to the rate limiting algorithm:
+ * - PATTERN:   Thread Confinement — each user's requests run on a dedicated thread,
+ *              so the algorithm needs no locks.
+ * - ALGORITHM: Token Bucket, Leaky Bucket, Fixed Window, Sliding Window Log/Counter —
+ *              any of the five can be swapped in via a static factory method.
  *
- * TRADITIONAL APPROACH (TokenBucketRateLimiter):
- * -----------------------------------------------
- * - Uses ReentrantLock for thread safety
- * - All threads contend on the same lock
- * - Under high load for SAME user: Lock contention kills performance
- * - Lock acquisition/release overhead even for uncontended case
- *
- * STRIPED EXECUTOR APPROACH (This Demo):
- * --------------------------------------
- * - Uses Thread Confinement (no locks!)
- * - Each user gets dedicated SingleThreadExecutor
- * - Token bucket for each user is accessed by ONLY that thread
- * - Zero lock contention even with high concurrent requests per user
- * - Better P99 latency under contention
- *
- * SCENARIOS DEMONSTRATED:
- * ======================
- * 1. Multi-User Rate Limiting: Each user has independent quota
- * 2. High Contention Test: 100 threads hitting same user concurrently
- * 3. Performance Comparison: Lock-based vs Thread-confined
- * 4. Per-User Isolation: One user's burst doesn't affect others
+ * SCENARIOS:
+ *   1. Token Bucket  — allows bursts; each user has an independent quota
+ *   2. Leaky Bucket  — enforces a constant output rate; bursts are flattened
+ *   3. Sliding Window Counter — production-grade accuracy with O(1) memory
  */
 public class StripedRateLimiterDemo {
 
     public static void main(String[] args) throws Exception {
         System.out.println("╔══════════════════════════════════════════════════════════════════╗");
-        System.out.println("║     Striped Executor Rate Limiter - Demonstration               ║");
-        System.out.println("║     Thread Confinement Pattern vs Lock-Based                    ║");
+        System.out.println("║     Striped Executor Rate Limiter — Pluggable Algorithms        ║");
         System.out.println("╚══════════════════════════════════════════════════════════════════╝\n");
 
-        // Scenario 1: Per-User Rate Limiting
-        demonstratePerUserRateLimiting();
+        demonstrateTokenBucket();
+        demonstrateLeakyBucket();
+        demonstrateSlidingWindowCounter();
 
-        // Scenario 2: High Contention Comparison
-        demonstrateHighContention();
-
-        // Scenario 3: Per-User Isolation
-        demonstrateUserIsolation();
-
-        System.out.println("\n✅ All scenarios completed successfully!");
+        System.out.println("All scenarios completed.");
     }
 
+    // ── Scenario 1: Token Bucket ──────────────────────────────────────────────
+
     /**
-     * SCENARIO 1: Per-User Rate Limiting
-     *
-     * Shows how each user gets their own independent token bucket.
-     * User A can burst while User B is rate limited - no interference.
+     * Token Bucket allows bursts up to the configured burst capacity.
+     * User A exhausts the burst quickly; User B is unaffected (per-user isolation).
      */
-    static void demonstratePerUserRateLimiting() throws Exception {
-        System.out.println("SCENARIO 1: Per-User Rate Limiting");
-        System.out.println("═══════════════════════════════════");
-        System.out.println("Config: 10 requests/second, burst capacity of 5 per user\n");
+    static void demonstrateTokenBucket() throws Exception {
+        System.out.println("SCENARIO 1: Token Bucket — per-user burst isolation");
+        System.out.println("════════════════════════════════════════════════════");
+        System.out.println("Config: 5 req/s, burst capacity 5 per user\n");
 
-        // Why: 10 requests/sec, burst of 5 tokens
         RateLimitConfig config = RateLimitConfig.builder()
-            .maxRequests(10)
-            .windowSize(java.time.Duration.ofSeconds(1))
-            .burstSize(5)
-            .build();
+                .maxRequests(5)
+                .windowSize(java.time.Duration.ofSeconds(1))
+                .burstSize(5)
+                .build();
 
-        StripedExecutorRateLimiter limiter = new StripedExecutorRateLimiter(config);
+        StripedExecutorRateLimiter limiter = StripedExecutorRateLimiter.withTokenBucket(config);
 
-        // Why: Simulate User A making 10 rapid requests
-        System.out.println("User A sending 10 rapid requests...");
-        CountDownLatch latchA = new CountDownLatch(10);
-        AtomicInteger allowedA = new AtomicInteger(0);
+        System.out.println("User A sending 10 rapid requests (burst capacity = 5)...");
+        int allowedA = fireRequests(limiter, "user-a", 10);
+        System.out.printf("  User A: %d/10 allowed (burst exhausted after 5)%n%n", allowedA);
 
-        for (int i = 0; i < 10; i++) {
-            final int reqNum = i;
-            limiter.tryAcquireAsync("user-a").thenAccept(allowed -> {
-                System.out.printf("  User A Request %d: %s%n",
-                    reqNum, allowed ? "✅ ALLOWED" : "❌ REJECTED");
-                if (allowed) allowedA.incrementAndGet();
-                latchA.countDown();
-            });
-        }
+        System.out.println("User B sending 3 requests (should all pass — isolated from User A)...");
+        int allowedB = fireRequests(limiter, "user-b", 3);
+        System.out.printf("  User B: %d/3 allowed%n", allowedB);
 
-        latchA.await(2, TimeUnit.SECONDS);
-        System.out.printf("User A Result: %d/10 allowed (burst capacity exhausted)\n\n", allowedA.get());
-
-        // Why: Simulate User B making 3 requests (should all pass)
-        System.out.println("User B sending 3 rapid requests...");
-        CountDownLatch latchB = new CountDownLatch(3);
-        AtomicInteger allowedB = new AtomicInteger(0);
-
-        for (int i = 0; i < 3; i++) {
-            final int reqNum = i;
-            limiter.tryAcquireAsync("user-b").thenAccept(allowed -> {
-                System.out.printf("  User B Request %d: %s%n",
-                    reqNum, allowed ? "✅ ALLOWED" : "❌ REJECTED");
-                if (allowed) allowedB.incrementAndGet();
-                latchB.countDown();
-            });
-        }
-
-        latchB.await(2, TimeUnit.SECONDS);
-        System.out.printf("User B Result: %d/3 allowed (isolated from User A's burst)\n", allowedB.get());
-
-        // Why: Show statistics
-        System.out.println("\nFinal Stats: " + limiter.getStats());
-        System.out.println("User A: " + limiter.getUserStats("user-a"));
-        System.out.println("User B: " + limiter.getUserStats("user-b"));
+        System.out.println("\n  " + limiter.getUserStats("user-a"));
+        System.out.println("  " + limiter.getUserStats("user-b"));
 
         limiter.shutdown();
-        System.out.println("\n" + "─".repeat(70) + "\n");
+        System.out.println("\n" + "─".repeat(65) + "\n");
     }
 
+    // ── Scenario 2: Leaky Bucket ──────────────────────────────────────────────
+
     /**
-     * SCENARIO 2: High Contention Performance Test
-     *
-     * 100 threads hitting the SAME user concurrently.
-     * Demonstrates why Striped Executor beats lock-based approaches:
-     * - No lock contention (requests queue on dedicated thread)
-     * - Predictable latency (no lock acquisition delays)
-     * - Better P99 latency under load
+     * Leaky Bucket enforces a constant output rate — no burst tolerance.
+     * Even the first few requests above the queue capacity are denied immediately.
+     * Contrast with Token Bucket where the first N requests always succeed.
      */
-    static void demonstrateHighContention() throws Exception {
-        System.out.println("SCENARIO 2: High Contention Performance Test");
-        System.out.println("════════════════════════════════════════════");
-        System.out.println("100 threads hitting SAME user concurrently\n");
+    static void demonstrateLeakyBucket() throws Exception {
+        System.out.println("SCENARIO 2: Leaky Bucket — constant rate enforcement");
+        System.out.println("════════════════════════════════════════════════════");
+        System.out.println("Config: 5 req/s, queue capacity 5\n");
 
         RateLimitConfig config = RateLimitConfig.builder()
-            .maxRequests(100)
-            .windowSize(java.time.Duration.ofSeconds(1))
-            .burstSize(50)
-            .build();
+                .maxRequests(5)
+                .windowSize(java.time.Duration.ofSeconds(1))
+                .burstSize(5)
+                .build();
 
-        StripedExecutorRateLimiter limiter = new StripedExecutorRateLimiter(config);
+        StripedExecutorRateLimiter limiter = StripedExecutorRateLimiter.withLeakyBucket(config);
+
+        System.out.println("Spammer sending 20 rapid requests...");
+        int spamAllowed = fireRequests(limiter, "spammer", 20);
+        System.out.printf("  spammer: %d/20 allowed (queue full after %d)%n%n",
+                spamAllowed, config.getBurstSize());
+
+        System.out.println("Good user sending 3 requests concurrently with spammer...");
+        int goodAllowed = fireRequests(limiter, "good-user", 3);
+        System.out.printf("  good-user: %d/3 allowed (independent queue — unaffected)%n", goodAllowed);
+
+        System.out.println("\n  Key difference from Token Bucket: Leaky Bucket has NO burst tolerance.");
+        System.out.println("  Requests above queue capacity are dropped immediately, not queued.");
+
+        System.out.println("\n  " + limiter.getStats());
+
+        limiter.shutdown();
+        System.out.println("\n" + "─".repeat(65) + "\n");
+    }
+
+    // ── Scenario 3: Sliding Window Counter ───────────────────────────────────
+
+    /**
+     * Sliding Window Counter approximates a true rolling window using two fixed windows.
+     * It avoids the boundary-burst problem of Fixed Window while using O(1) memory.
+     *
+     * This scenario runs 100 threads against the same user to demonstrate
+     * that the striped pattern handles high concurrency with low latency.
+     */
+    static void demonstrateSlidingWindowCounter() throws Exception {
+        System.out.println("SCENARIO 3: Sliding Window Counter — high-concurrency accuracy test");
+        System.out.println("═══════════════════════════════════════════════════════════════════");
+        System.out.println("Config: 100 req/s, 100 threads hitting the same user simultaneously\n");
+
+        RateLimitConfig config = RateLimitConfig.builder()
+                .maxRequests(100)
+                .windowSize(java.time.Duration.ofSeconds(1))
+                .burstSize(100)
+                .build();
+
+        StripedExecutorRateLimiter limiter = StripedExecutorRateLimiter.withSlidingWindowCounter(config);
 
         int threadCount = 100;
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch completeLatch = new CountDownLatch(threadCount);
-        AtomicInteger totalAllowed = new AtomicInteger(0);
-
-        // Why: Record start time for latency measurement
-        long[] latencies = new long[threadCount];
-
-        System.out.printf("Spawning %d threads to hit 'hot-user' simultaneously...%n", threadCount);
+        CountDownLatch startGate = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        AtomicInteger allowed   = new AtomicInteger(0);
+        long[] latencies         = new long[threadCount];
 
         for (int i = 0; i < threadCount; i++) {
-            final int threadNum = i;
+            final int idx = i;
             new Thread(() -> {
                 try {
-                    startLatch.await();  // All threads start together
+                    startGate.await();
                     long start = System.nanoTime();
-
-                    boolean allowed = limiter.tryAcquire("hot-user");
-
-                    long latency = System.nanoTime() - start;
-                    latencies[threadNum] = latency;
-
-                    if (allowed) totalAllowed.incrementAndGet();
-                    completeLatch.countDown();
+                    if (limiter.tryAcquire("hot-user")) allowed.incrementAndGet();
+                    latencies[idx] = System.nanoTime() - start;
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } finally {
+                    doneLatch.countDown();
                 }
             }).start();
         }
 
-        // Why: Release all threads at once for maximum contention
         long testStart = System.currentTimeMillis();
-        startLatch.countDown();
-        completeLatch.await(5, TimeUnit.SECONDS);
+        startGate.countDown();
+        doneLatch.await(5, TimeUnit.SECONDS);
         long testDuration = System.currentTimeMillis() - testStart;
 
-        // Why: Calculate latency statistics
-        long minLatency = Long.MAX_VALUE;
-        long maxLatency = Long.MIN_VALUE;
-        long sumLatency = 0;
+        long min = Long.MAX_VALUE, max = Long.MIN_VALUE, sum = 0;
         for (long lat : latencies) {
-            minLatency = Math.min(minLatency, lat);
-            maxLatency = Math.max(maxLatency, lat);
-            sumLatency += lat;
+            min = Math.min(min, lat);
+            max = Math.max(max, lat);
+            sum += lat;
         }
 
-        System.out.printf("Test completed in %d ms%n", testDuration);
-        System.out.printf("Total allowed: %d/%d (bucket capacity + some refills)%n",
-            totalAllowed.get(), threadCount);
-        System.out.printf("Latency (microseconds): min=%d, avg=%d, max=%d%n",
-            minLatency / 1000, (sumLatency / threadCount) / 1000, maxLatency / 1000);
+        System.out.printf("  Completed in %d ms%n", testDuration);
+        System.out.printf("  Allowed: %d/%d%n", allowed.get(), threadCount);
+        System.out.printf("  Latency (µs): min=%d, avg=%d, max=%d%n",
+                min / 1000, (sum / threadCount) / 1000, max / 1000);
+        System.out.println("\n  Why Sliding Window Counter beats Fixed Window here:");
+        System.out.println("  At window boundaries, Fixed Window can let 2× the limit through.");
+        System.out.println("  Sliding Window Counter blends prev/current windows → no boundary spike.");
 
-        // Why: Compare with what lock-based would experience
-        System.out.println("\n💡 Why this matters:");
-        System.out.println("   - Lock-based: Threads block, retry, cause cache line bouncing");
-        System.out.println("   - Striped: Threads submit tasks, executor serializes on one thread");
-        System.out.println("   - Result: Lower P99 latency, no CAS retry loops, no lock contention");
-
-        System.out.println("\nUser Stats: " + limiter.getUserStats("hot-user"));
+        System.out.println("\n  " + limiter.getUserStats("hot-user"));
 
         limiter.shutdown();
-        System.out.println("\n" + "─".repeat(70) + "\n");
     }
 
-    /**
-     * SCENARIO 3: Per-User Isolation Under Load
-     *
-     * Shows that one user's excessive traffic doesn't starve others.
-     * Hot user gets rate limited independently; other users unaffected.
-     */
-    static void demonstrateUserIsolation() throws Exception {
-        System.out.println("SCENARIO 3: Per-User Isolation Under Load");
-        System.out.println("══════════════════════════════════════════");
-        System.out.println("Hot user (spammer) vs Regular users - no interference\n");
+    // ── Shared helper ─────────────────────────────────────────────────────────
 
-        RateLimitConfig config = RateLimitConfig.builder()
-            .maxRequests(5)
-            .windowSize(java.time.Duration.ofSeconds(1))
-            .burstSize(5)
-            .build();
+    /** Fires n async requests for a user and returns how many were allowed. */
+    private static int fireRequests(StripedExecutorRateLimiter limiter,
+                                    String userId, int count) throws InterruptedException {
+        CountDownLatch latch = new CountDownLatch(count);
+        AtomicInteger allowed = new AtomicInteger(0);
 
-        StripedExecutorRateLimiter limiter = new StripedExecutorRateLimiter(config);
-
-        // Why: "spammer" sends 50 rapid requests
-        System.out.println("'spammer-user' sending 50 rapid requests...");
-        CountDownLatch spammerLatch = new CountDownLatch(50);
-        AtomicInteger spammerAllowed = new AtomicInteger(0);
-
-        for (int i = 0; i < 50; i++) {
-            limiter.tryAcquireAsync("spammer-user").thenAccept(allowed -> {
-                if (allowed) spammerAllowed.incrementAndGet();
-                spammerLatch.countDown();
+        for (int i = 0; i < count; i++) {
+            limiter.tryAcquireAsync(userId).thenAccept(permit -> {
+                if (permit) allowed.incrementAndGet();
+                latch.countDown();
             });
         }
 
-        // Why: Meanwhile, "good-user" sends 3 requests
-        Thread.sleep(10);  // Slight delay to interleave
-        System.out.println("'good-user' sending 3 requests during spam...");
-        CountDownLatch goodLatch = new CountDownLatch(3);
-        AtomicInteger goodAllowed = new AtomicInteger(0);
-
-        for (int i = 0; i < 3; i++) {
-            limiter.tryAcquireAsync("good-user").thenAccept(allowed -> {
-                if (allowed) goodAllowed.incrementAndGet();
-                goodLatch.countDown();
-            });
-        }
-
-        spammerLatch.await(3, TimeUnit.SECONDS);
-        goodLatch.await(3, TimeUnit.SECONDS);
-
-        System.out.printf("\nResults:%n");
-        System.out.printf("  spammer-user: %d/50 allowed (rate limited after burst)%n", spammerAllowed.get());
-        System.out.printf("  good-user: %d/3 allowed (unaffected by spammer's traffic)%n", goodAllowed.get());
-
-        System.out.println("\n✅ Key takeaway: Per-user isolation prevents one bad actor from affecting others");
-        System.out.println("   This is critical for multi-tenant API gateways!");
-
-        System.out.println("\nFinal Stats: " + limiter.getStats());
-
-        limiter.shutdown();
+        latch.await(3, TimeUnit.SECONDS);
+        return allowed.get();
     }
 }

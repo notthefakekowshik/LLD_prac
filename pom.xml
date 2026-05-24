@@ -12,6 +12,7 @@
     <modules>
         <module>core-lld</module>
         <module>java-fundamentals</module>
+        <module>my_practice</module>
     </modules>
 
     <properties>

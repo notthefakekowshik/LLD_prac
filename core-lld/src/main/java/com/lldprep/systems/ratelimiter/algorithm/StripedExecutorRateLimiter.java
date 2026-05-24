@@ -5,146 +5,145 @@ import com.lldprep.systems.ratelimiter.RateLimitConfig;
 import com.lldprep.systems.ratelimiter.RateLimiter;
 
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Supplier;
 
 /**
- * Striped Executor Rate Limiter - Thread Confinement Pattern.
+ * Striped Executor Rate Limiter — Thread Confinement Pattern.
  *
- * PROBLEM WITH TRADITIONAL RATE LIMITERS:
- * ---------------------------------------
- * Traditional rate limiters use locks (ReentrantLock) or atomics (CAS) for thread safety.
- * Under high contention for the SAME user, this creates performance issues:
- * - Lock contention: Threads block waiting for the lock
- * - CAS retries: Atomic operations spin-retry under contention, wasting CPU
- * - Cache line bouncing: Atomic variables ping-pong between CPU cores
+ * CORE IDEA:
+ * Instead of synchronizing access to shared per-user state (locks, CAS), we
+ * eliminate sharing entirely. Each user gets a dedicated SingleThreadExecutor,
+ * so all rate-limiting decisions for that user run on exactly one thread.
+ * The per-user algorithm instance therefore needs zero locks or atomics.
  *
- * SOLUTION: Thread Confinement via Striped Executor
- * -------------------------------------------------
- * Instead of synchronizing access to shared state, we eliminate sharing entirely:
- * - Each user gets a dedicated SingleThreadExecutor
- * - All requests for user X run on user X's dedicated thread
- * - Token bucket for user X is accessed ONLY by that thread = NO LOCKS NEEDED
+ *   User A requests ──► [Executor for User A (1 thread)] ──► [AlgorithmA — no locks]
+ *   User B requests ──► [Executor for User B (1 thread)] ──► [AlgorithmB — no locks]
  *
- * Architecture:
- * ```
- * User A requests ──┐
- * User A requests ──┼──► [Executor for User A] ──► [TokenBucket A] ──► Allow/Deny
- * User A requests ──┘         (1 thread)            (no locks!)
+ * WHY THIS BEATS LOCK-BASED RATE LIMITERS UNDER HIGH CONCENTION:
+ *   Lock-based: many threads fight over the same lock → spinning → poor P99 latency
+ *   Striped:    each thread submits a task and returns; the executor serializes
+ *               access naturally → no contention → predictable latency
  *
- * User B requests ──┐
- * User B requests ──┼──► [Executor for User B] ──► [TokenBucket B] ──► Allow/Deny
- * User B requests ──┘         (1 thread)            (no locks!)
+ * PLUGGABLE ALGORITHMS (Strategy Pattern):
+ * The algorithm is injected via a Supplier<PerUserAlgorithm>, so any of the five
+ * built-in algorithms (or a custom one) can be used without modifying this class.
+ * Use the static factory methods for the standard choices:
  *
- * Result: Zero lock contention. Each user's bucket is single-threaded.
- * ```
+ *   StripedExecutorRateLimiter.withTokenBucket(config)          // allows bursts
+ *   StripedExecutorRateLimiter.withLeakyBucket(config)          // constant rate, no bursts
+ *   StripedExecutorRateLimiter.withFixedWindow(config)          // simple counter
+ *   StripedExecutorRateLimiter.withSlidingWindowLog(config)     // precise, O(n) memory
+ *   StripedExecutorRateLimiter.withSlidingWindowCounter(config) // best overall trade-off
  *
- * Trade-offs:
- * - PRO: Zero lock contention even at high throughput
- * - PRO: Natural per-user isolation (different users can't interfere)
- * - PRO: Simpler token bucket implementation (no synchronization)
- * - CON: O(users) threads - memory overhead per thread (~1MB stack)
- * - CON: Not suitable for unlimited users (use bounded variant for that)
- * - CON: Thread context switching overhead
+ * TRADE-OFFS:
+ *   + Zero lock contention, lower and more predictable P99 latency
+ *   + Natural per-user isolation — one user's traffic never blocks another's
+ *   + Works with any PerUserAlgorithm without code changes here
+ *   − One OS thread per active user (~1 MB stack each); not for unbounded user sets
  *
- * Best For:
- * - Per-user API rate limiting with bounded user count (< 10,000)
- * - High-contention scenarios (many requests for same user)
- * - Systems where predictable latency matters (P99 optimization)
- *
- * Algorithm: Token Bucket per user
- * - Each user has independent token bucket
- * - Tokens refill at configured rate per user
- * - Burst capacity configurable per user
+ * Best for: per-user API rate limiting with a bounded user count (< ~10,000 users).
  */
 public class StripedExecutorRateLimiter implements RateLimiter {
 
-    // Why: Maps userId to their dedicated executor
-    // Thread-safe: ConcurrentHashMap for concurrent access
-    private final ConcurrentHashMap<String, ExecutorService> userExecutors;
-
-    // Why: Maps userId to their token bucket state
-    // Accessed ONLY by the user's dedicated thread - no synchronization needed!
-    private final ConcurrentHashMap<String, PerUserTokenBucket> userBuckets;
-
     private final RateLimitConfig config;
+    private final AlgorithmType algorithmType;
 
-    // Why: Metrics tracking (thread-safe counters)
+    // Why: Strategy Pattern — algorithm is injected, not hardcoded.
+    //      Each call creates a fresh instance for a new user.
+    private final Supplier<PerUserAlgorithm> algorithmFactory;
+
+    // Why: ConcurrentHashMap — the map itself is shared across threads (multiple callers
+    //      submitting requests for different users concurrently), even though each value
+    //      (executor / algorithm) is only ever used by one thread at a time.
+    private final ConcurrentHashMap<String, ExecutorService> userExecutors;
+    private final ConcurrentHashMap<String, PerUserAlgorithm> userAlgorithms;
+    private final ConcurrentHashMap<String, PerUserMetrics> userMetrics;
+
+    // Global counters (written from multiple threads via LongAdder to minimize contention)
     private final LongAdder totalRequests;
     private final LongAdder allowedRequests;
     private final LongAdder rejectedRequests;
 
     /**
-     * Creates a striped executor rate limiter.
+     * Primary constructor — use when injecting a custom algorithm.
+     * For the five standard algorithms, prefer the static factory methods below.
      *
-     * @param config Rate limit configuration (applied per user)
+     * @param config           rate limit configuration applied per user
+     * @param algorithmType    identifies which algorithm is in use (for getAlgorithmType())
+     * @param algorithmFactory produces a fresh algorithm instance for each new user
      */
-    public StripedExecutorRateLimiter(RateLimitConfig config) {
+    public StripedExecutorRateLimiter(RateLimitConfig config,
+                                       AlgorithmType algorithmType,
+                                       Supplier<PerUserAlgorithm> algorithmFactory) {
         this.config = config;
+        this.algorithmType = algorithmType;
+        this.algorithmFactory = algorithmFactory;
         this.userExecutors = new ConcurrentHashMap<>();
-        this.userBuckets = new ConcurrentHashMap<>();
+        this.userAlgorithms = new ConcurrentHashMap<>();
+        this.userMetrics = new ConcurrentHashMap<>();
         this.totalRequests = new LongAdder();
         this.allowedRequests = new LongAdder();
         this.rejectedRequests = new LongAdder();
     }
 
+    // ── Static factory methods ────────────────────────────────────────────────
+
+    /** Tokens accumulate over time up to burst capacity — allows short traffic spikes. */
+    public static StripedExecutorRateLimiter withTokenBucket(RateLimitConfig config) {
+        return new StripedExecutorRateLimiter(config, AlgorithmType.TOKEN_BUCKET,
+                () -> new PerUserTokenBucket(config));
+    }
+
+    /** Requests drain at a constant rate — smooths bursts, no "saved up" capacity. */
+    public static StripedExecutorRateLimiter withLeakyBucket(RateLimitConfig config) {
+        return new StripedExecutorRateLimiter(config, AlgorithmType.LEAKY_BUCKET,
+                () -> new PerUserLeakyBucket(config));
+    }
+
+    /** Simple counter per time window — has boundary burst problem, use for coarse limits. */
+    public static StripedExecutorRateLimiter withFixedWindow(RateLimitConfig config) {
+        return new StripedExecutorRateLimiter(config, AlgorithmType.FIXED_WINDOW,
+                () -> new PerUserFixedWindow(config));
+    }
+
+    /** Exact rolling window — perfect accuracy, O(n) memory per user. */
+    public static StripedExecutorRateLimiter withSlidingWindowLog(RateLimitConfig config) {
+        return new StripedExecutorRateLimiter(config, AlgorithmType.SLIDING_WINDOW_LOG,
+                () -> new PerUserSlidingWindowLog(config));
+    }
+
+    /** Weighted blend of two windows — best accuracy-to-memory ratio, O(1) per user. */
+    public static StripedExecutorRateLimiter withSlidingWindowCounter(RateLimitConfig config) {
+        return new StripedExecutorRateLimiter(config, AlgorithmType.SLIDING_WINDOW_COUNTER,
+                () -> new PerUserSlidingWindowCounter(config));
+    }
+
+    // ── Core API ──────────────────────────────────────────────────────────────
+
     /**
-     * Attempts to acquire a permit for the specified user.
+     * Non-blocking async check. The returned future resolves on the user's dedicated
+     * thread, so the caller is never blocked.
      *
-     * Execution Flow:
-     * 1. Route request to user's dedicated executor (based on userId)
-     * 2. On that thread, check token bucket (no locks needed!)
-     * 3. Return CompletableFuture with result
-     *
-     * Why CompletableFuture: Rate limiting decision is asynchronous
-     * because it runs on the user's dedicated thread.
-     *
-     * @param userId User identifier (the stripe key)
-     * @return Future containing true if allowed, false if rate limited
+     * @param userId identifies the rate-limited entity (user ID, tenant, API key…)
+     * @return future containing true if the request is allowed
      */
     public CompletableFuture<Boolean> tryAcquireAsync(String userId) {
         totalRequests.increment();
-
-        // Why: Get or create dedicated executor for this user
-        // computeIfAbsent ensures atomic lazy initialization
-        ExecutorService executor = userExecutors.computeIfAbsent(userId, this::createUserExecutor);
-
-        // Why: Submit task to user's dedicated thread
-        // All operations for this user serialize on this thread
-        return CompletableFuture.supplyAsync(() -> {
-            // Why: Get or create token bucket for this user
-            // Only THIS thread ever accesses this bucket = NO LOCKS NEEDED
-            PerUserTokenBucket bucket = userBuckets.computeIfAbsent(
-                userId,
-                uid -> new PerUserTokenBucket(config.getBurstSize(), config.getRefillRatePerNano())
-            );
-
-            // Why: Single-threaded access = no synchronization required
-            boolean allowed = bucket.tryConsume(1);
-
-            if (allowed) {
-                allowedRequests.increment();
-            } else {
-                rejectedRequests.increment();
-            }
-
-            return allowed;
-        }, executor);
+        return submitRequest(userId, 1);
     }
 
     /**
-     * Synchronous version - blocks until rate limiting decision is made.
+     * Synchronous check. Blocks until the user's dedicated thread makes the decision.
+     * Still benefits from thread confinement — no lock contention in the algorithm.
      *
-     * Use this for simple cases where async isn't needed.
-     * Still benefits from thread confinement (no lock contention).
-     *
-     * @param userId User identifier
-     * @return true if allowed, false if rate limited
+     * @param userId identifies the rate-limited entity
+     * @return true if the request is allowed
      */
     public boolean tryAcquire(String userId) {
+        totalRequests.increment();
         try {
-            return tryAcquireAsync(userId).get(100, TimeUnit.MILLISECONDS);
+            return submitRequest(userId, 1).get(100, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
@@ -155,34 +154,14 @@ public class StripedExecutorRateLimiter implements RateLimiter {
 
     @Override
     public boolean tryAcquire() {
-        // Why: Default user for global rate limiting interface
         return tryAcquire("default");
     }
 
     @Override
     public boolean tryAcquire(int permits) {
-        // Why: Multi-permit acquisition for weighted requests
         totalRequests.add(permits);
-
-        ExecutorService executor = userExecutors.computeIfAbsent("default", this::createUserExecutor);
-
         try {
-            return CompletableFuture.supplyAsync(() -> {
-                PerUserTokenBucket bucket = userBuckets.computeIfAbsent(
-                    "default",
-                    uid -> new PerUserTokenBucket(config.getBurstSize(), config.getRefillRatePerNano())
-                );
-
-                boolean allowed = bucket.tryConsume(permits);
-
-                if (allowed) {
-                    allowedRequests.add(permits);
-                } else {
-                    rejectedRequests.add(permits);
-                }
-
-                return allowed;
-            }, executor).get(100, TimeUnit.MILLISECONDS);
+            return submitRequest("default", permits).get(100, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
@@ -193,39 +172,29 @@ public class StripedExecutorRateLimiter implements RateLimiter {
 
     @Override
     public long getAvailablePermits() {
-        PerUserTokenBucket bucket = userBuckets.get("default");
-        return bucket != null ? (long) bucket.getAvailableTokens() : config.getBurstSize();
+        return getAvailablePermits("default");
     }
 
     /**
-     * Gets available permits for a specific user.
+     * Returns the approximate available permits for a user.
      *
-     * @param userId User identifier
-     * @return Available tokens for the user
+     * Reads the algorithm state from the calling thread rather than the user's dedicated
+     * thread. The value may be slightly stale under concurrent writes. Use for monitoring
+     * only — never for rate-limiting decisions.
      */
     public long getAvailablePermits(String userId) {
-        PerUserTokenBucket bucket = userBuckets.get(userId);
-        return bucket != null ? (long) bucket.getAvailableTokens() : config.getBurstSize();
+        PerUserAlgorithm algorithm = userAlgorithms.get(userId);
+        return algorithm != null ? algorithm.availablePermits() : config.getBurstSize();
     }
 
     @Override
     public void reset() {
-        PerUserTokenBucket bucket = userBuckets.get("default");
-        if (bucket != null) {
-            bucket.reset(config.getBurstSize());
-        }
+        reset("default");
     }
 
-    /**
-     * Resets rate limiter for a specific user.
-     *
-     * @param userId User to reset
-     */
     public void reset(String userId) {
-        PerUserTokenBucket bucket = userBuckets.get(userId);
-        if (bucket != null) {
-            bucket.reset(config.getBurstSize());
-        }
+        PerUserAlgorithm algorithm = userAlgorithms.get(userId);
+        if (algorithm != null) algorithm.reset();
     }
 
     @Override
@@ -235,14 +204,11 @@ public class StripedExecutorRateLimiter implements RateLimiter {
 
     @Override
     public AlgorithmType getAlgorithmType() {
-        return AlgorithmType.TOKEN_BUCKET;
+        return algorithmType;
     }
 
-    /**
-     * Returns statistics about this rate limiter.
-     *
-     * @return Statistics snapshot
-     */
+    // ── Stats ─────────────────────────────────────────────────────────────────
+
     public Stats getStats() {
         return new Stats(
             totalRequests.sum(),
@@ -252,47 +218,61 @@ public class StripedExecutorRateLimiter implements RateLimiter {
         );
     }
 
-    /**
-     * Returns per-user statistics.
-     *
-     * @param userId User identifier
-     * @return User statistics or null if user not found
-     */
     public UserStats getUserStats(String userId) {
-        PerUserTokenBucket bucket = userBuckets.get(userId);
-        if (bucket == null) {
-            return null;
-        }
-
+        PerUserAlgorithm algorithm = userAlgorithms.get(userId);
+        PerUserMetrics metrics = userMetrics.get(userId);
+        if (algorithm == null || metrics == null) return null;
         return new UserStats(
             userId,
-            (long) bucket.getAvailableTokens(),
-            bucket.getTotalRequests(),
-            bucket.getAllowedRequests(),
-            bucket.getRejectedRequests()
+            algorithm.availablePermits(),
+            metrics.total.sum(),
+            metrics.allowed.sum(),
+            metrics.rejected.sum()
         );
     }
 
-    /**
-     * Shuts down all user executors.
-     * Call this on application shutdown.
-     */
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
     public void shutdown() {
         userExecutors.values().forEach(ExecutorService::shutdown);
     }
 
+    // ── Internal helpers ──────────────────────────────────────────────────────
+
     /**
-     * Creates a dedicated single-thread executor for a user.
-     *
-     * Why SingleThreadExecutor:
-     * - Guarantees sequential execution for that user's requests
-     * - No lock contention on the token bucket
-     * - Thread name helps with debugging/profiling
-     *
-     * @param userId User identifier
-     * @return New single-thread executor
+     * Routes a rate-limiting request to the user's dedicated thread.
+     * The algorithm and metrics updates both happen on that thread.
      */
-    private ExecutorService createUserExecutor(String userId) {
+    private CompletableFuture<Boolean> submitRequest(String userId, int permits) {
+        ExecutorService executor = userExecutors.computeIfAbsent(userId, this::createExecutor);
+
+        return CompletableFuture.supplyAsync(() -> {
+            // computeIfAbsent is safe here because only this user's thread ever writes
+            // to this key — the executor guarantees single-threaded access per userId.
+            PerUserAlgorithm algorithm = userAlgorithms.computeIfAbsent(userId,
+                    uid -> algorithmFactory.get());
+
+            boolean allowed = algorithm.tryConsume(permits);
+            recordMetrics(userId, allowed);
+            return allowed;
+        }, executor);
+    }
+
+    private void recordMetrics(String userId, boolean allowed) {
+        PerUserMetrics metrics = userMetrics.computeIfAbsent(userId, uid -> new PerUserMetrics());
+        metrics.total.increment();
+        if (allowed) {
+            allowedRequests.increment();
+            metrics.allowed.increment();
+        } else {
+            rejectedRequests.increment();
+            metrics.rejected.increment();
+        }
+    }
+
+    private ExecutorService createExecutor(String userId) {
+        // Why: daemon thread so it doesn't prevent JVM shutdown.
+        //      Named thread helps with debugging thread dumps.
         return Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "rate-limiter-" + userId);
             t.setDaemon(true);
@@ -300,164 +280,62 @@ public class StripedExecutorRateLimiter implements RateLimiter {
         });
     }
 
-    // ============== Statistics Classes ==============
+    // ── Inner types ───────────────────────────────────────────────────────────
+
+    /**
+     * Per-user request counters.
+     *
+     * Written on the user's dedicated thread; read from any thread (e.g., getUserStats).
+     * LongAdder is used instead of plain longs to guarantee visibility across threads.
+     */
+    private static class PerUserMetrics {
+        final LongAdder total   = new LongAdder();
+        final LongAdder allowed  = new LongAdder();
+        final LongAdder rejected = new LongAdder();
+    }
 
     public static class Stats {
         public final long totalRequests;
         public final long allowedRequests;
         public final long rejectedRequests;
-        public final int activeUsers;
+        public final int  activeUsers;
 
         Stats(long total, long allowed, long rejected, int users) {
-            this.totalRequests = total;
+            this.totalRequests  = total;
             this.allowedRequests = allowed;
             this.rejectedRequests = rejected;
-            this.activeUsers = users;
+            this.activeUsers    = users;
         }
 
         @Override
         public String toString() {
+            double rate = totalRequests > 0 ? 100.0 * allowedRequests / totalRequests : 0.0;
             return String.format(
-                "StripedRateLimiter{total=%d, allowed=%d, rejected=%d, users=%d, rate=%.1f%%}",
-                totalRequests, allowedRequests, rejectedRequests, activeUsers,
-                totalRequests > 0 ? 100.0 * allowedRequests / totalRequests : 0.0
-            );
+                "Stats{total=%d, allowed=%d, rejected=%d, users=%d, allowRate=%.1f%%}",
+                totalRequests, allowedRequests, rejectedRequests, activeUsers, rate);
         }
     }
 
     public static class UserStats {
         public final String userId;
-        public final long availableTokens;
-        public final long totalRequests;
-        public final long allowedRequests;
-        public final long rejectedRequests;
+        public final long   availablePermits;
+        public final long   totalRequests;
+        public final long   allowedRequests;
+        public final long   rejectedRequests;
 
-        UserStats(String userId, long tokens, long total, long allowed, long rejected) {
-            this.userId = userId;
-            this.availableTokens = tokens;
-            this.totalRequests = total;
-            this.allowedRequests = allowed;
+        UserStats(String userId, long available, long total, long allowed, long rejected) {
+            this.userId           = userId;
+            this.availablePermits = available;
+            this.totalRequests    = total;
+            this.allowedRequests  = allowed;
             this.rejectedRequests = rejected;
         }
 
         @Override
         public String toString() {
             return String.format(
-                "UserStats{user=%s, tokens=%d, total=%d, allowed=%d, rejected=%d}",
-                userId, availableTokens, totalRequests, allowedRequests, rejectedRequests
-            );
-        }
-    }
-
-    // ============== Per-User Token Bucket (No Locks!) ==============
-
-    /**
-     * Single-threaded token bucket - NO SYNCHRONIZATION NEEDED.
-     *
-     * CRITICAL: This class is designed for single-threaded access only.
-     * The StripedExecutor guarantees all access to a user's bucket happens
-     * on that user's dedicated thread.
-     *
-     * Why no locks:
-     * - Thread confinement eliminates need for synchronization
-     * - Better performance than lock-based or CAS-based approaches
-     * - Simpler code (no lock/unlock, no retry loops)
-     */
-    private static class PerUserTokenBucket {
-        private final double capacity;
-        private final double refillRatePerNano;
-
-        // Why: These are accessed by only ONE thread - no volatile/atomic needed!
-        private double tokens;
-        private long lastRefillTime;
-
-        // Why: Simple counters for metrics (only accessed by one thread)
-        private long totalRequests;
-        private long allowedRequests;
-        private long rejectedRequests;
-
-        PerUserTokenBucket(double capacity, double refillRatePerNano) {
-            this.capacity = capacity;
-            this.refillRatePerNano = refillRatePerNano;
-            this.tokens = capacity;
-            this.lastRefillTime = System.nanoTime();
-        }
-
-        /**
-         * Attempts to consume tokens from the bucket.
-         *
-         * No synchronization needed - called from single thread only.
-         *
-         * @param permits Number of tokens to consume
-         * @return true if consumed, false if not enough tokens
-         */
-        boolean tryConsume(int permits) {
-            totalRequests++;
-
-            // Why: Refill based on elapsed time
-            refill();
-
-            if (tokens >= permits) {
-                tokens -= permits;
-                allowedRequests++;
-                return true;
-            }
-
-            rejectedRequests++;
-            return false;
-        }
-
-        /**
-         * Returns current available tokens.
-         *
-         * @return Available tokens (refills first)
-         */
-        double getAvailableTokens() {
-            refill();
-            return tokens;
-        }
-
-        /**
-         * Resets bucket to initial state.
-         *
-         * @param initialTokens Starting token count
-         */
-        void reset(double initialTokens) {
-            tokens = initialTokens;
-            lastRefillTime = System.nanoTime();
-            totalRequests = 0;
-            allowedRequests = 0;
-            rejectedRequests = 0;
-        }
-
-        long getTotalRequests() {
-            return totalRequests;
-        }
-
-        long getAllowedRequests() {
-            return allowedRequests;
-        }
-
-        long getRejectedRequests() {
-            return rejectedRequests;
-        }
-
-        /**
-         * Refills tokens based on elapsed time.
-         *
-         * No synchronization needed - called from single thread only.
-         */
-        private void refill() {
-            long now = System.nanoTime();
-            long elapsedNanos = now - lastRefillTime;
-
-            if (elapsedNanos <= 0) {
-                return;
-            }
-
-            double tokensToAdd = elapsedNanos * refillRatePerNano;
-            tokens = Math.min(tokens + tokensToAdd, capacity);
-            lastRefillTime = now;
+                "UserStats{user=%s, available=%d, total=%d, allowed=%d, rejected=%d}",
+                userId, availablePermits, totalRequests, allowedRequests, rejectedRequests);
         }
     }
 }
