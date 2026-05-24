@@ -5,108 +5,68 @@ import com.lldprep.systems.ratelimiter.RateLimitConfig;
 import com.lldprep.systems.ratelimiter.RateLimiter;
 import com.lldprep.systems.ratelimiter.factory.RateLimiterFactory;
 
+import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 /**
  * Registry Pattern: Manages rate limiters for multiple users/resources.
- * 
- * Features:
- * - Per-user rate limiting
- * - Lazy initialization (creates limiter on first access)
- * - Thread-safe using ConcurrentHashMap
- * - Easy cleanup of inactive limiters
- * 
+ *
+ * Creation logic is fully externalized via a limiterFactory function,
+ * so callers control per-user algorithm and config (e.g. free vs premium tiers).
+ *
  * Use Cases:
  * - API rate limiting per user/API key
  * - Resource quotas per tenant
  * - Per-IP rate limiting
- * 
+ *
  * Thread Safety:
  * - ConcurrentHashMap for thread-safe map operations
  * - computeIfAbsent ensures atomic lazy initialization
  */
 public class UserRateLimiterRegistry {
-    
+
+    // Why: sensible out-of-the-box default so callers don't have to specify a factory
+    private static final Function<String, RateLimiter> DEFAULT_FACTORY = userId ->
+            RateLimiterFactory.create(
+                    AlgorithmType.TOKEN_BUCKET,
+                    RateLimitConfig.builder()
+                            .maxRequests(100)
+                            .windowSize(Duration.ofSeconds(1))
+                            .build()
+            );
+
     private final ConcurrentHashMap<String, RateLimiter> limiters;
-    private final AlgorithmType defaultAlgorithm;
-    private final RateLimitConfig defaultConfig;
-    
-    /**
-     * Creates a registry with default algorithm and configuration.
-     * 
-     * @param defaultAlgorithm Algorithm to use for new limiters
-     * @param defaultConfig Configuration for new limiters
-     */
-    public UserRateLimiterRegistry(AlgorithmType defaultAlgorithm, RateLimitConfig defaultConfig) {
+    private final Function<String, RateLimiter> limiterFactory;
+
+    private UserRateLimiterRegistry(Builder builder) {
         this.limiters = new ConcurrentHashMap<>();
-        this.defaultAlgorithm = defaultAlgorithm;
-        this.defaultConfig = defaultConfig;
+        this.limiterFactory = builder.limiterFactory;
     }
-    
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
     /**
      * Gets or creates a rate limiter for the specified user.
-     * 
-     * Thread-safe: Uses computeIfAbsent for atomic lazy initialization.
-     * 
-     * @param userId User identifier (e.g., user ID, API key, IP address)
-     * @return RateLimiter for the user
+     * Creation is delegated to the configured limiterFactory.
      */
     public RateLimiter getLimiter(String userId) {
         if (userId == null || userId.isEmpty()) {
             throw new IllegalArgumentException("User ID cannot be null or empty");
         }
-        
-        return limiters.computeIfAbsent(userId, id -> 
-            RateLimiterFactory.create(defaultAlgorithm, defaultConfig)
-        );
+        return limiters.computeIfAbsent(userId, limiterFactory);
     }
-    
-    /**
-     * Gets or creates a rate limiter with custom configuration.
-     * 
-     * @param userId User identifier
-     * @param algorithm Algorithm type for this user
-     * @param config Configuration for this user
-     * @return RateLimiter for the user
-     */
-    public RateLimiter getLimiter(String userId, AlgorithmType algorithm, RateLimitConfig config) {
-        if (userId == null || userId.isEmpty()) {
-            throw new IllegalArgumentException("User ID cannot be null or empty");
-        }
-        
-        return limiters.computeIfAbsent(userId, id -> 
-            RateLimiterFactory.create(algorithm, config)
-        );
-    }
-    
-    /**
-     * Checks if a limiter exists for the user.
-     * 
-     * @param userId User identifier
-     * @return true if limiter exists
-     */
+
     public boolean hasLimiter(String userId) {
         return limiters.containsKey(userId);
     }
-    
-    /**
-     * Removes the rate limiter for the specified user.
-     * 
-     * Useful for cleanup when user is inactive or deleted.
-     * 
-     * @param userId User identifier
-     * @return true if limiter was removed, false if didn't exist
-     */
+
     public boolean removeLimiter(String userId) {
         return limiters.remove(userId) != null;
     }
-    
-    /**
-     * Resets the rate limiter for the specified user.
-     * 
-     * @param userId User identifier
-     * @return true if limiter was reset, false if didn't exist
-     */
+
     public boolean resetLimiter(String userId) {
         RateLimiter limiter = limiters.get(userId);
         if (limiter != null) {
@@ -115,32 +75,42 @@ public class UserRateLimiterRegistry {
         }
         return false;
     }
-    
-    /**
-     * Clears all rate limiters.
-     * 
-     * Useful for testing or system-wide reset.
-     */
+
     public void clear() {
         limiters.clear();
     }
-    
-    /**
-     * Returns the number of active rate limiters.
-     * 
-     * @return Number of users with active limiters
-     */
+
     public int size() {
         return limiters.size();
     }
-    
-    /**
-     * Returns statistics about the registry.
-     * 
-     * @return Human-readable statistics
-     */
+
     public String getStats() {
-        return String.format("UserRateLimiterRegistry{users=%d, algorithm=%s, config=%s}",
-                           limiters.size(), defaultAlgorithm, defaultConfig);
+        return String.format("UserRateLimiterRegistry{users=%d}", limiters.size());
+    }
+
+    public static class Builder {
+
+        private Function<String, RateLimiter> limiterFactory = DEFAULT_FACTORY;
+
+        /**
+         * Provides a function that maps a userId to a RateLimiter.
+         * Use this to implement per-tier or per-user policies.
+         *
+         * Example:
+         *   .limiterFactory(userId -> isPremium(userId)
+         *       ? RateLimiterFactory.createTokenBucket(premiumConfig)
+         *       : RateLimiterFactory.createFixedWindow(freeConfig))
+         */
+        public Builder limiterFactory(Function<String, RateLimiter> factory) {
+            if (factory == null) {
+                throw new IllegalArgumentException("limiterFactory cannot be null");
+            }
+            this.limiterFactory = factory;
+            return this;
+        }
+
+        public UserRateLimiterRegistry build() {
+            return new UserRateLimiterRegistry(this);
+        }
     }
 }

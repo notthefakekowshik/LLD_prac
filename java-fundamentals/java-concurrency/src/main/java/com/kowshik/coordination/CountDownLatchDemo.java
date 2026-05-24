@@ -37,7 +37,7 @@ public class CountDownLatchDemo {
         Thread.sleep(2000);
 
         // Demo 2: Simultaneous start (starting gun pattern)
-        simultaneousStartDemo();
+//        simultaneousStartDemo();
     }
 
     /**
@@ -48,14 +48,14 @@ public class CountDownLatchDemo {
 
         int workerCount = 5;
         CountDownLatch latch = new CountDownLatch(workerCount);
-        ExecutorService executor = Executors.newFixedThreadPool(workerCount);
+        ExecutorService executor = Executors.newFixedThreadPool(15);
 
-        for (int i = 1; i <= workerCount; i++) {
+        for (int i = 1; i <= 15; i++) {
             final int workerId = i;
             executor.submit(() -> {
                 try {
                     logger.info("Worker {} started", workerId);
-                    Thread.sleep((long) (Math.random() * 2000));
+                    Thread.sleep(10000);
                     logger.info("Worker {} completed", workerId);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

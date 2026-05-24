@@ -321,12 +321,12 @@ public class RateLimiterDemo {
                 .windowSize(Duration.ofSeconds(1))
                 .build();
         
-        UserRateLimiterRegistry registry = new UserRateLimiterRegistry(
-            AlgorithmType.TOKEN_BUCKET, config
-        );
+        UserRateLimiterRegistry registry = UserRateLimiterRegistry.builder()
+                .limiterFactory(userId -> RateLimiterFactory.createTokenBucket(config))
+                .build();
         
         System.out.println("Config: 3 requests/second per user\n");
-        
+        System.out.println("Using algo -> " + registry.getLimiter("user-alice").getAlgorithmType());
         String[] users = {"user-alice", "user-bob", "user-charlie"};
         
         System.out.println("Each user attempts 5 requests:");
