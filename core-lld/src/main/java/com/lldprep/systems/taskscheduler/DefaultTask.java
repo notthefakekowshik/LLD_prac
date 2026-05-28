@@ -25,6 +25,7 @@ public class DefaultTask implements Task {
     private final long intervalMillis;
     private final long maxExecutions;
     
+    // All state mutations use Atomic* — lock-free CAS, each operation O(1)
     private final AtomicLong nextExecutionTime;
     private final AtomicLong executionCount;
     private final AtomicBoolean cancelled;
@@ -170,6 +171,6 @@ public class DefaultTask implements Task {
     
     @Override
     public int compareTo(Task other) {
-        return Long.compare(this.getNextExecutionTime(), other.getNextExecutionTime());
+        return Long.compare(this.getNextExecutionTime(), other.getNextExecutionTime()); // O(1)
     }
 }

@@ -99,6 +99,6 @@ public interface Task extends Comparable<Task> {
      */
     @Override
     default int compareTo(Task other) {
-        return Long.compare(this.getNextExecutionTime(), other.getNextExecutionTime());
+        return Long.compare(this.getNextExecutionTime(), other.getNextExecutionTime()); // O(1) — drives heap ordering in both scheduler implementations
     }
 }
