@@ -53,10 +53,10 @@ public class ConditionDemo {
         private final Lock lock = new ReentrantLock();
 
         // Condition: Queue is not full (Producers wait on this)
-        private final Condition notFull = lock.newCondition();
+        private final Condition isFull = lock.newCondition();
 
         // Condition: Queue is not empty (Consumers wait on this)
-        private final Condition notEmpty = lock.newCondition();
+        private final Condition isEmpty = lock.newCondition();
 
         public BoundedBuffer(int capacity) {
             this.capacity = capacity;
@@ -69,7 +69,7 @@ public class ConditionDemo {
                 // Standard idiom: wait loop to handle spurious wakeups
                 while (queue.size() == capacity) {
                     System.out.println("Queue is FULL. Producer waiting...");
-                    notFull.await(); // Releases lock and waits
+                    isFull.await(); // Releases lock and waits
                 }
 
                 // 2. Perform the action
@@ -78,7 +78,7 @@ public class ConditionDemo {
 
                 // 3. Signal waiting consumers
                 // Signal 'notEmpty' because we just added an item
-                notEmpty.signal();
+                isEmpty.signal();
             } finally {
                 lock.unlock();
             }
@@ -90,7 +90,7 @@ public class ConditionDemo {
                 // 1. Wait while the buffer is empty
                 while (queue.isEmpty()) {
                     System.out.println("Queue is EMPTY. Consumer waiting...");
-                    notEmpty.await(); // Releases lock and waits
+                    isEmpty.await(); // Releases lock and waits
                 }
 
                 // 2. Perform the action
@@ -99,7 +99,7 @@ public class ConditionDemo {
 
                 // 3. Signal waiting producers
                 // Signal 'notFull' because we just removed an item
-                notFull.signal();
+                isFull.signal();
 
                 return item;
             } finally {
@@ -151,13 +151,13 @@ public class ConditionDemo {
 
 class ConditionDemoWithExecutor {
     public static void main(String[] args) throws InterruptedException {
-        BetterBlockingQueue<Integer> betterBlockingQueue = new BetterBlockingQueue<>(5);
+        BetterBoundedBuffer<Integer> betterBoundedBuffer = new BetterBoundedBuffer<>(5);
 
         try (ExecutorService producers = Executors.newFixedThreadPool(10)) {
             producers.submit(() -> {
                 for (int i = 0; i < 200; i++) {
                     try {
-                        betterBlockingQueue.put(i);
+                        betterBoundedBuffer.put(i);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
@@ -172,7 +172,7 @@ class ConditionDemoWithExecutor {
             producers.submit(() -> {
                 for (int i = 0; i < 10; i++) {
                     try {
-                        betterBlockingQueue.take();
+                        betterBoundedBuffer.take();
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
@@ -187,7 +187,7 @@ class ConditionDemoWithExecutor {
     }
 }
 
-class BetterBlockingQueue<T> {
+class BetterBoundedBuffer<T> {
     private final Queue<T> queue = new LinkedList<>();
     private final int capacity;
 
@@ -195,10 +195,10 @@ class BetterBlockingQueue<T> {
     private final Lock lock = new ReentrantLock();
 
     // 2. The Conditions (The separate waiting rooms)
-    private final Condition notFull = lock.newCondition();
-    private final Condition notEmpty = lock.newCondition();
+    private final Condition isFull = lock.newCondition();
+    private final Condition isEmpty = lock.newCondition();
 
-    public BetterBlockingQueue(int capacity) {
+    public BetterBoundedBuffer(int capacity) {
         this.capacity = capacity;
     }
 
@@ -208,7 +208,7 @@ class BetterBlockingQueue<T> {
             // If full, go to the "notFull" waiting room
             while (queue.size() == capacity) {
                 System.out.println("!!!! QUEUE IS FULL !!!!!");
-                notFull.await();
+                isFull.await();
             }
 
             queue.add(item);
@@ -216,7 +216,7 @@ class BetterBlockingQueue<T> {
             // KEY MOMENT: We ONLY wake up consumers!
             // We signal the 'notEmpty' room.
             // Producers stuck in 'notFull' stay asleep (no contention).
-            notEmpty.signal();
+            isEmpty.signal();
 
         } finally {
             lock.unlock(); // Always unlock in finally
@@ -229,14 +229,14 @@ class BetterBlockingQueue<T> {
             // If empty, go to the "notEmpty" waiting room
             while (queue.isEmpty()) {
                 System.out.println("!!!! QUEUE IS EMPTY !!!!!");
-                notEmpty.await();
+                isEmpty.await();
             }
 
             T item = queue.remove();
             System.out.println("Consumed : " + item);
             // KEY MOMENT: We ONLY wake up producers!
             // We signal the 'notFull' room.
-            notFull.signal();
+            isFull.signal();
 
             return item;
         } finally {
