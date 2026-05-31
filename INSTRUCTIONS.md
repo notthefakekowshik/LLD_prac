@@ -112,6 +112,134 @@ Cache cache = new Cache(policy);
 
 ---
 
+### Step 2.5: Schema Design (Persistence Mapping)
+
+**What to produce:** A `SCHEMA.md` with an ER diagram (Mermaid.js), table definitions, business rules, and concurrency model.
+
+**Why this exists:** LLD coding rounds are typically in-memory only, but interviewers expect you to verbalize how the system maps to a database. SDE3 rounds explicitly test this. Writing `SCHEMA.md` bridges the gap between "working in-memory" and "production-ready."
+
+**What SCHEMA.md must contain:**
+
+1. **ER Diagram** (Mermaid `erDiagram`) — every entity from the class diagram mapped to a table with columns and types.
+2. **Table Definitions** — one table per section with Column, Type, Constraints, and Notes columns.
+3. **Business Rules** — constraints that span multiple tables or require application logic (e.g., "balance can never go negative").
+4. **Index Strategy** — which columns need indexes and why (cardinality, query patterns).
+5. **Concurrency Model** — how each in-memory `synchronized` block maps to a database locking strategy (pessimistic vs optimistic).
+6. **Migration Path** — a few sentences on how the in-memory managers (`ConcurrentHashMap`, `List`) map to JDBC/JPA repositories.
+
+**Schema template:**
+
+```
+# {System Name} — Database Schema
+
+## ER Diagram
+```mermaid
+erDiagram
+    ENTITY_A ||--o{ ENTITY_B : "relationship"
+    ENTITY_A {
+        string id PK
+        string attribute
+    }
+```
+
+## Table Definitions
+### 1. `table_name` — Purpose
+| Column | Type | Constraints | Notes |
+|--------|------|------------|-------|
+| id | ... | PRIMARY KEY | |
+
+**Business Rules:**
+- Rule description
+
+## Index Strategy
+| Table | Index | Reason |
+|-------|-------|--------|
+
+## Concurrency Model
+| Scenario | In-Memory | Database |
+|----------|-----------|----------|
+| ... | | |
+
+## Migration from In-Memory
+1. `ComponentName` → `table_name`
+```
+
+**Reference example:** `core-lld/src/main/java/com/lldprep/systems/atm/SCHEMA.md`
+
+**Rule:** Every Phase 4 machine coding problem must include a `SCHEMA.md`. Phase 3 building blocks are exempt (they're components, not full systems with relational data).
+
+---
+
+### Step 2.6: API Contract Design (External Interface)
+
+**What to produce:** An `API_CONTRACT.md` defining REST endpoints, request/response schemas, error codes, and the state machine → HTTP mapping.
+
+**Why this exists:** In LLD interviews, the external interface is often the first deliverable — before any class diagram. Interviewers test whether you can define clean APIs with proper error handling, state enforcement, and backward-compatible extensibility.
+
+**When it's required:**
+
+| System Type | API_CONTRACT.md required? | Reason |
+|-------------|--------------------------|--------|
+| **User-facing systems** (ATM, BookMyShow, ParkingLot, Hotel, Library) | ✅ Yes | Multiple user actions, session/state management, clear request/response cycles |
+| **Backend engines** (OrderBook, SymbolSearch, RateLimiter) | ⚠️ Optional | These are internal components consumed by code, not users. API contract adds less value than README + DESIGN.md. Can be added if the system exposes a public-facing query interface. |
+| **Building blocks** (Cache, ThreadPool, Logging, TaskScheduler, BloomFilter) | ❌ No | These are libraries/components with programmatic APIs, not REST endpoints. The Java interface IS the contract. |
+| **Games/Simulations** (Chess, Snake & Ladder) | ❌ No | Turn-based games don't map naturally to REST. Console I/O is the interface. |
+
+**Decision rule:** If the system has **multiple actors** (user, admin, system) AND **state-based interactions** (login → select → transact → logout), it needs an API contract. If it's a single-facade component consumed via Java method calls, skip it.
+
+**What API_CONTRACT.md must contain:**
+
+1. **Endpoint summary table** — HTTP method, path, purpose, required state
+2. **Request/Response schemas** — JSON examples with field-level validation
+3. **Error response format** — consistent structure with machine-readable codes
+4. **State machine → HTTP mapping** — which state gates which endpoint (returns `400 INVALID_STATE`)
+5. **Postman-style flow** — 2-3 example traces (happy path, error path, edge path)
+6. **DTO → model mapping** — how request fields map to in-memory entities
+
+**API contract template:**
+
+```
+# {System Name} — API Contract
+
+## Endpoint Summary
+| Method | Endpoint | Purpose | State Required |
+|--------|----------|---------|----------------|
+
+## Request / Response Schemas
+### 1. {Operation Name}
+```
+{HTTP_METHOD} /api/v1/{path}
+Content-Type: application/json
+```
+
+**Request:**
+```json
+{ ... }
+```
+
+| Field | Type | Required | Validation |
+|-------|------|----------|------------|
+
+**Success Response (200):**
+```json
+{ ... }
+```
+
+**Error Responses:**
+| Status | Error Code | Message |
+|--------|-----------|---------|
+
+## State Machine → HTTP Mapping
+## Error Response Format
+## DTO → In-Memory Mapping
+## Postman Collection (Interview-Friendly)
+## Extending the API
+```
+
+**Reference example:** `core-lld/src/main/java/com/lldprep/systems/atm/API_CONTRACT.md`
+
+---
+
 ## 2. SOLID Principles — Quick Reference
 
 These are non-negotiable. Internalize them before writing any class.
@@ -170,6 +298,11 @@ com.lldprep.systems.<system>/    → Real system / machine coding problems
     exception/    → Custom checked/unchecked exceptions
     factory/      → Factory classes (if applicable)
     demo/         → Main demo class
+    README.md     → Design overview, patterns used, quickstart
+    DESIGN.md     → Abbreviated D.I.C.E. workflow
+    DESIGN_DICE.md→ Complete D.I.C.E. workflow with class diagrams
+    SCHEMA.md     → Database schema (ER diagram, tables, locking strategy) — Phase 4 only
+    API_CONTRACT.md→ REST API contract (Phase 4 user-facing systems only — see Section 2.6)
 ```
 
 > **Note on package declarations:** Directory structure lives under `systems/` for organisation, but Java package names remain `com.lldprep.<system>` (not `com.lldprep.systems.<system>`). Maven resolves by classpath, not folder path — this is intentional to avoid a mass rename.
@@ -215,6 +348,21 @@ Run through this before marking any problem as complete:
 - [ ] Custom exceptions defined in `exception/`.
 - [ ] No `instanceof` chains — use polymorphism instead.
 - [ ] **No inline multi-statement blocks** — never put more than one statement on a line or collapse `if/else/while` bodies onto a single line. Every block must use braces `{}` and each statement must be on its own line. This repo is for interview preparation — code must be readable at a glance.
+
+**Schema**
+- [ ] Does `SCHEMA.md` exist with an ER diagram? (Phase 4 systems only)
+- [ ] Are all entities mapped to tables with columns and types?
+- [ ] Are business rules (non-negative balance, immutable transactions) documented?
+- [ ] Is the concurrency model described (in-memory vs database locking)?
+- [ ] Is the index strategy justified by query patterns?
+
+**API Contract**
+- [ ] Does `API_CONTRACT.md` exist? (user-facing Phase 4 systems only)
+- [ ] Are all endpoints listed with HTTP method, path, purpose, and required state?
+- [ ] Are request/response JSON schemas documented with field validation?
+- [ ] Is the error response format consistent with machine-readable codes?
+- [ ] Is the state machine → HTTP mapping documented?
+- [ ] Are 2-3 Postman-style traces included (happy, error, edge)?
 
 **Demo**
 - [ ] Does the `Main` class cover all functional requirements?

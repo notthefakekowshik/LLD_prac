@@ -48,9 +48,9 @@ Complete phases in order. Each phase builds on the previous one.
 - `executors/BlockingQueue_Theory.md` — extended with `SynchronousQueue`, `PriorityBlockingQueue`, `LinkedTransferQueue`, full comparison table, Q&A
 
 **Remaining gaps:**
-- ⬜ `leetcodeconcurrency/` package — all 4 problems not yet implemented
-- ⬜ `volatile` double-checked locking demo — broken pattern vs correct `volatile` singleton
-- ⬜ Thread interruption contract demo — `interrupt()`, `isInterrupted()`, restore vs propagate
+- ✅ `leetcodeconcurrency/` package — all 4 problems implemented (PrintInOrder, FizzBuzz, BoundedBlockingQueue, ZeroEvenOdd)
+- ✅ `volatile` double-checked locking demo — implemented 2026-05-31 (threads/DoubleCheckedLockingDemo.java)
+- ✅ Thread interruption contract demo — implemented 2026-05-31 (threads/ThreadInterruptionDemo.java)
 
 ---
 
