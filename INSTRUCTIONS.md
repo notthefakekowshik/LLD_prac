@@ -305,7 +305,7 @@ com.lldprep.systems.<system>/    → Real system / machine coding problems
     API_CONTRACT.md→ REST API contract (Phase 4 user-facing systems only — see Section 2.6)
 ```
 
-> **Note on package declarations:** Directory structure lives under `systems/` for organisation, but Java package names remain `com.lldprep.<system>` (not `com.lldprep.systems.<system>`). Maven resolves by classpath, not folder path — this is intentional to avoid a mass rename.
+> **Note on package declarations:** Directory structure mirrors the package name. Package names follow: `com.lldprep.systems.<system>` (e.g., `com.lldprep.systems.atm`, `com.lldprep.systems.moviebooking`). Foundations use: `com.lldprep.foundations.<category>`.
 
 ### Concurrency
 - Use `synchronized`, `ReentrantLock`, or `Atomic*` variables where shared state is mutated.

@@ -12,12 +12,12 @@
 
 #### 🔴 HIGH — Interview Staples (60%+ of LLD rounds)
 
-- [ ] **Movie Booking System (BookMyShow)**
-  - **ROI:** Very High — most common LLD question across Uber, Amazon, Flipkart, Swiggy
-  - **Tests:** Concurrent seat locking, multi-city/theater/screen, payment integration, booking lifecycle
-  - **Patterns expected:** State, Strategy, Observer, Facade, Command
-  - **Curveballs:** Add cancellation, add dynamic pricing, add waitlist
-  - **Location:** `my_practice/moviebooking/`
+- [x] **Movie Booking System (BookMyShow)** ✓ *Completed 2026-05-31*
+  - 8 demo scenarios: search, seat view, happy path, concurrent locking, lock expiry, cancel, double-booking prevention, multi-user no-conflict
+  - **Concurrency:** Pessimistic per-show locking via `synchronized` + `ConcurrentHashMap` — atomic check-and-lock
+  - **Patterns:** Facade (`BookingFacade`), Strategy (`SeatLockService` expiry), Repository (`ShowRepository`, `BookingRepository`)
+  - **4 docs:** DESIGN.md (DICE), DESIGN_DICE.md, SCHEMA.md (8 tables + Concurrency model in SQL), API_CONTRACT.md (7 endpoints + Postman traces), README.md
+  - **Location:** `core-lld/src/main/java/com/lldprep/systems/moviebooking/`
 
 - [ ] **Splitwise**
   - **ROI:** Very High — asked at Uber, Amazon, Flipkart heavily
@@ -241,7 +241,7 @@
 ## Summary — Recommended Execution Order
 
 ### First Sprint (Interview-Readiness)
-1. 🔴 Movie Booking System (BookMyShow)
+1. ✅ ~~Movie Booking System (BookMyShow)~~ *Done 2026-05-31*
 2. 🔴 Splitwise
 3. 🔴 Chess
 4. 🔴 Sealed Classes + Pattern Matching (all 3)
@@ -276,13 +276,13 @@
 
 | Category | Total Gaps | 🔴 High | 🟡 Medium | 🟢 Low |
 |----------|-----------|---------|-----------|--------|
-| LLD Systems | 6 | 3 | 3 | 0 |
+| LLD Systems | 5 | 2 | 3 | 0 |
 | LLD Patterns | 3 | 0 | 1 | 2 |
 | LLD Cross-Cutting | 1 | 0 | 1 | 0 |
 | Java Concurrency | 5 | 0 | 4 | 1 |
 | Java Plain | 7 | 3 | 4 | 1 |
 | Reactive | 1 (track) | 0 | 1 | 0 |
 | Documentation | 0 ✅ | 0 | 0 | 0 |
-| **TOTAL** | **23** | **6** | **14** | **5** |
+| **TOTAL** | **22** | **5** | **14** | **5** |
 
-> Streams + DCL + Thread Interruption completed 2026-05-31. Remaining: 23 gaps across 6 categories.
+> BookMyShow completed 2026-05-31. Remaining: 22 gaps across 6 categories.
