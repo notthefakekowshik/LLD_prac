@@ -1,83 +1,62 @@
 # Backlog
 
-Items deferred from the main roadmap. Pick these up opportunistically — while solving machine coding problems or when a pattern comes up naturally.
+Topics that surfaced during design sessions but couldn't be actioned at the time.
+Pick these up between implementation sprints.
+
+> **Note:** Implementation gaps (missing systems, patterns, Java demos) are tracked in
+> [GAPS_TRACKER.md](./GAPS_TRACKER.md). BACKLOG is for meta/quality/documentation gaps
+> that don't fit the per-item checklist format.
 
 ---
 
-## Phase 2: Design Pattern Catalog
+## 🔴 Meta — Stale Tracker Files
 
-**Decision (2026-04-07):** Deferred. Patterns will be learned on the go while building Phase 3 & 4 problems. Each machine coding problem naturally exercises several patterns — learn them in context rather than in isolation.
-
-**How to use this backlog:**
-- When a Phase 4 problem requires a pattern (e.g., Parking Lot needs State + Strategy), implement it there and check it off here.
-- If a pattern never appears organically, revisit after Phase 4 is done.
-
----
-
-### 2.1 Creational Patterns
-
-- [ ] **Singleton** — Thread-safe `ConfigManager` using double-checked locking.
-  - *Likely appears in:* any system needing a shared config/registry (Parking Lot, ATM)
-
-- [ ] **Factory Method** — `NotificationFactory` creating `EmailNotification` / `SMSNotification` / `PushNotification` based on a type enum.
-  - *Likely appears in:* BookMyShow (notification on booking), Hotel Management
-
-- [ ] **Abstract Factory** — `DatabaseFactory` creating paired `Connection` + `QueryBuilder` for MySQL or PostgreSQL.
-  - *Likely appears in:* any persistence-heavy problem
-
-- [ ] **Builder** — Immutable `HttpRequest` with required (`url`, `method`) and optional (`headers`, `body`, `timeout`) fields.
-  - *Already practiced in:* FixedThreadPool.Builder (thread pool refactor)
-
-- [ ] **Prototype** — `GamePieceRegistry` storing prototype chess pieces and cloning on demand.
-  - *Likely appears in:* Chess
+| # | Issue | Impact | Status |
+|---|-------|--------|--------|
+| 1 | **CLAUDE.md roadmap section** — Shows `[ ]` for Phase 1 SOLID exercises, Phase 3 building blocks (ThreadPool, RateLimiter, Logging, TaskScheduler), and Phase 4 systems (ParkingLot, MovieBooking, VendingMachine, ATM) — all completed in core-lld. New AI sessions get wrong completion state. | High — fresh sessions start with incorrect context | Not Started |
+| 2 | **PATTERNS.md Iterator + Chain of Responsibility** — Both show `[ ] Implemented` but have full good/bad examples in `core-lld/src/.../foundations/behavioral/`. Iterator: in-order/pre-order/post-order with BinaryTree. CoR: ConsoleHandler → FileHandler → EmailAlertHandler. | Medium — documentation says "missing" when code exists | Not Started |
+| 3 | **ROADMAP.md Phase 4** — Splitwise, Chess, SnakeLadder, Hotel, Library correctly show `[ ]` (genuinely unimplemented). Need to verify no other stale checkmarks exist. | Low — appears accurate after last sync | Not Started |
 
 ---
 
-### 2.2 Structural Patterns
+## 🟡 Quality — Missing / Incomplete Documentation
 
-- [ ] **Adapter** — Adapt `LegacyXMLParser` (returns `org.w3c.dom.Document`) to `DataParser` interface (returns `Map<String, Object>`).
-
-- [ ] **Bridge** — `Message` (Simple / Urgent) × `MessageSender` (Email / SMS) — 2×2 without class explosion.
-
-- [ ] **Decorator** — Stack `TimestampDecorator` + `SeverityDecorator` on a `ConsoleLogger`.
-  - *Likely appears in:* Logging Framework (Phase 3)
-
-- [ ] **Facade** — `HomeTheaterFacade` wrapping `dvd.on()`, `amplifier.setVolume()`, `projector.on()` into `watchMovie()`.
-  - *Likely appears in:* BookMyShow (BookingFacade), Hotel Management
-
-- [ ] **Flyweight** — `ForestRenderer` with 1,000 trees sharing `TreeType` (name, color, texture); position as extrinsic state.
-
-- [ ] **Proxy** — `CachingImageProxy` loading from disk only on first access, then serving from cache.
-  - *Already practiced in:* In-Memory Cache (Phase 3)
+| # | Gap | Why It Matters | Status |
+|---|-----|---------------|--------|
+| 4 | **No init.md exists** — Unlike HLD's `scenarios/init.md`, the LLD repo has no directory-level context file. `CLAUDE.md` covers the whole repo, but content-heavy subdirectories (`core-lld/`, `java-fundamentals/`) have no bootstrap docs for fresh AI sessions. | Medium — taste preference for content-heavy directories | Not Started |
+| 5 | **No test files for LLD systems** — Every system has a `Main` demo class but zero unit tests. Systems like OrderBook (concurrent matching), MovieBooking (seat locking), and RateLimiter (algorithm correctness) would benefit from targeted tests. | Medium — catching regressions when adding curveballs | Not Started |
+| 6 | **Concurrency correctness proofs** — Only MovieBooking DESIGN.md explicitly documents its concurrency model. OrderBook uses thread confinement but doesn't explain *why* it's safe. ThreadPool's executor has subtle correctness properties. | Medium — interviewers probe "how do you know this is thread-safe?" | Not Started |
+| 7 | **Performance benchmarking framework** — Concurrent data structures (CopyOnWriteArrayList, ConcurrentHashMap) and LLD systems (OrderBook matching throughput) have no benchmark tooling. Theory files mention "better throughput" but no numbers. | Low — SDE-3 differentiator | Not Started |
 
 ---
 
-### 2.3 Behavioral Patterns
+## 🟢 Nice to Have — Content Expansions
 
-- [ ] **Strategy** — `Sorter` accepting `SortStrategy` (`BubbleSort` / `QuickSort` / `MergeSort`), swappable at runtime.
-  - *Already practiced in:* Cache eviction policy, Rate Limiter algorithms, Rejection policies (thread pool), Payment strategies (factory demo)
-
-- [ ] **Observer** — `WeatherStation` notifying `PhoneDisplay`, `TVDisplay`, `Logger` on temperature change.
-  - *Likely appears in:* BookMyShow (seat availability), Parking Lot (spot availability)
-
-- [ ] **Command** — Text editor with `TypeCommand`, `DeleteCommand`, undo/redo history stack.
-  - *Likely appears in:* ATM (transaction commands), Vending Machine
-
-- [ ] **State** — `TrafficLight` with Red/Yellow/Green states, auto-transitioning, different behavior per state.
-  - *Likely appears in:* Vending Machine, ATM, Parking Lot gate
-
-- [ ] **Template Method** — `DataMigration` skeleton with `readFromSource()`, `transformData()`, `writeToTarget()`; subclasses: `CSVtoJSON`, `XMLtoCSV`.
-  - *Likely appears in:* Logging Framework (Handler base), Task Scheduler
-
-- [ ] **Iterator** — `BinaryTree` with in-order, pre-order, post-order iterators without exposing internal structure.
-
-- [ ] **Chain of Responsibility** — `LogHandler` chain: `DebugHandler → InfoHandler → WarnHandler → ErrorHandler`.
-  - *Likely appears in:* Logging Framework (Phase 3)
+| # | Gap | Why It Matters | Status |
+|---|-----|---------------|--------|
+| 8 | **Design Pattern Composition** — Each pattern is implemented in isolation (good/bad). No file demonstrates composing 3+ patterns together (e.g., Facade + Strategy + Observer in one system). Real interviews require this. | Medium — interview realism | Not Started |
+| 9 | **Interview Walkthrough Videos/Scripts** — No "think aloud" examples of solving a machine coding problem in ~60 min under interview pressure. The DESIGN.md files are post-hoc, not real-time. | Low — soft skill, not technical gap | Not Started |
+| 10 | **Common Interview Pitfalls** — Reverse reference: what NOT to do when the interviewer says "design a parking lot." No anti-pattern catalog specific to LLD machine coding rounds. | Medium — avoiding known traps | Not Started |
+| 11 | **Curveball Swarm** — Some systems have single curveball scenarios. No multi-curveball composition (e.g., "add EV charging to Parking Lot AND add dynamic pricing AND add reservation system" all at once). | Low — stress-testing OCP | Not Started |
+| 12 | **my_practice/ directory** — 14 empty stub directories created with `.gitkeep`. These were intended for personal practice re-implementations of completed systems. Either populate or remove. | Low — repo cleanliness | Not Started |
 
 ---
 
-## Notes
+## Quick Summary
 
-- Strategy, Builder, and Proxy are already well-practiced through Phase 3 work.
-- State and Chain of Responsibility will be exercised naturally in the Logging Framework.
-- Observer and Command will come up in BookMyShow and ATM respectively.
+| Priority | Count | What |
+|----------|-------|------|
+| 🔴 Meta | 3 | Stale checkboxes in CLAUDE.md, PATTERNS.md |
+| 🟡 Quality | 4 | Missing docs, no tests, no concurrency proofs |
+| 🟢 Nice to have | 5 | Pattern composition, interview pitfalls, practice stubs |
+
+> **Implementation gaps** (Splitwise, Chess, Mediator, Sealed Classes, Livelock, Reactive, etc.) →
+> tracked in [GAPS_TRACKER.md](./GAPS_TRACKER.md). Do NOT duplicate here.
+
+---
+
+## 🔵 Documentation Gaps in PATTERNS.md
+
+| # | Gap | Why It Matters | Status |
+|---|-----|---------------|--------|
+| 13 | **Memento — implemented but undocumented** — `foundations/behavioral/memento/` has good/bad examples (TextEditor, EditorMemento, EditorHistory) but PATTERNS.md has no section. Only appears in GoF overview diagram. | Medium — code exists, catalog is incomplete | Not Started |

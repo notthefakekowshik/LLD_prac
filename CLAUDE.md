@@ -99,11 +99,11 @@ com.lldprep.foundations/
 ## Current Roadmap Progress
 
 ### Phase 1: Foundations
-- [ ] SRP, OCP, LSP, ISP, DIP exercises
-- [ ] Composition vs Inheritance (FlyingFish)
-- [ ] Abstract Classes vs Interfaces (PaymentProcessor)
-- [ ] Encapsulation (BankAccount)
-- [ ] UML: Class Diagram + Sequence Diagram
+- [x] SRP, OCP, LSP, ISP, DIP exercises
+- [x] Composition vs Inheritance (FlyingFish)
+- [x] Abstract Classes vs Interfaces (PaymentProcessor)
+- [x] Encapsulation (BankAccount)
+- [x] UML: Class Diagram + Sequence Diagram
 
 ### Phase 2: Design Patterns
 **Creational:** ✅ All 5 patterns completed with comprehensive good/bad examples
@@ -113,19 +113,19 @@ com.lldprep.foundations/
 
 ### Phase 3: Building Blocks
 - [x] In-Memory Cache (LRU via Strategy) — *Completed 2026-03-24*
-- [ ] Custom Thread Pool
-- [ ] Rate Limiter (Token Bucket + Leaky Bucket)
-- [ ] Logging Framework
-- [ ] Task Scheduler
+- [x] Custom Thread Pool
+- [x] Rate Limiter (Token Bucket + Leaky Bucket)
+- [x] Logging Framework
+- [x] Task Scheduler
 
 ### Phase 4: Machine Coding Problems
-- [ ] Parking Lot System
-- [ ] Movie Booking System (BookMyShow)
+- [x] Parking Lot System
+- [x] Movie Booking System (BookMyShow)
 - [ ] Splitwise
 - [ ] Snake and Ladder
 - [ ] Chess
-- [ ] Vending Machine
-- [ ] ATM Machine
+- [x] Vending Machine
+- [x] ATM Machine
 - [ ] Hotel Management System
 - [ ] Library Management System
 

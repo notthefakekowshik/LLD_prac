@@ -314,7 +314,7 @@ public class StripeAdapter implements PaymentProcessor {
 ---
 
 ### Bridge
-- [ ] Implemented
+- [x] Implemented (good/bad examples in foundations/structural/bridge)
 
 **Problem:** You have two independent dimensions of variation (e.g., shape type AND rendering API). Without Bridge, you get a class explosion (`RedCircle`, `BlueCircle`, `RedSquare`, ...).
 
@@ -357,7 +357,7 @@ public class Circle extends Shape {
 ---
 
 ### Decorator
-- [ ] Implemented
+- [x] Implemented (good/bad examples in foundations/structural/decorator)
 
 **Problem:** You need to add behavior to an object dynamically at runtime without subclassing it (subclassing for every combination is explosive).
 
@@ -449,7 +449,7 @@ public class ComputerFacade {
 ---
 
 ### Flyweight
-- [ ] Implemented
+- [x] Implemented (good/bad examples in foundations/structural/flyweight)
 
 **Problem:** You need a large number of similar objects, and storing all of them fully would consume too much memory. Share the *intrinsic* (constant) state, keep *extrinsic* (variable) state outside.
 
@@ -494,7 +494,7 @@ public class GlyphFactory {
 ---
 
 ### Proxy
-- [ ] Implemented
+- [x] Implemented (good/bad examples in foundations/structural/proxy)
 
 **Problem:** You need to control access to an object — for lazy initialization, access control, logging, or remote access — without changing the real object.
 
@@ -554,7 +554,7 @@ These patterns handle *communication and responsibility* between objects.
 ---
 
 ### Strategy
-- [ ] Implemented
+- [x] Implemented (good/bad examples in foundations/behavioral/strategy)
 
 **Problem:** You have a family of algorithms that are interchangeable, and you want to swap them without changing the calling code.
 
@@ -603,7 +603,7 @@ public class Cache<K, V> {
 ---
 
 ### Observer
-- [ ] Implemented (consider adding to Task Scheduler for task lifecycle events)
+- [x] Implemented (good/bad examples in foundations/behavioral/observer)
 
 **Problem:** When one object changes state, multiple other objects need to be notified automatically, without tight coupling.
 
@@ -655,7 +655,7 @@ public class InventoryUpdater implements EventListener { public void onEvent(...
 ---
 
 ### Command
-- [ ] Implemented
+- [x] Implemented (good/bad examples in foundations/behavioral/command)
 
 **Problem:** You want to encapsulate a request as an object, so you can queue it, log it, or undo it.
 
@@ -701,7 +701,7 @@ public class RemoteControl {
 ---
 
 ### State
-- [ ] Implemented
+- [x] Implemented (good/bad examples in foundations/behavioral/state)
 
 **Problem:** An object's behavior changes dramatically based on its internal state. Conditional logic (`if state == IDLE ... else if state == PROCESSING`) becomes unmanageable.
 
@@ -752,7 +752,7 @@ public class VendingMachine {
 ---
 
 ### Template Method
-- [ ] Implemented
+- [x] Implemented (good/bad examples in foundations/behavioral/templatemethod)
 
 **Problem:** Multiple classes share the same algorithm skeleton, but differ in specific steps. Avoid duplicating the skeleton.
 
@@ -799,7 +799,7 @@ public class JSONExporter extends DataExporter {
 ---
 
 ### Iterator
-- [ ] Implemented
+- [x] Implemented (good/bad examples in foundations/behavioral/iterator)
 
 **Problem:** You need to traverse a collection without exposing its internal structure (whether it's a list, tree, or graph).
 
@@ -835,7 +835,7 @@ public class ParkingFloorIterator implements Iterator<ParkingSpot> {
 ---
 
 ### Chain of Responsibility
-- [ ] Implemented
+- [x] Implemented (good/bad examples in foundations/behavioral/chainofresponsibility)
 
 **Problem:** Multiple handlers can process a request. You don't want the sender to know which handler will process it — pass the request along a chain until someone handles it.
 
