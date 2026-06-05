@@ -19,6 +19,7 @@ Every problem must follow this iterative design lifecycle:
 - **Constraints** — Hard limits on the system.
   - e.g., "Max 10,000 parking slots", "No external database — in-memory only".
 - **Out of Scope** — Explicitly state what you are NOT building.
+- **AI Agent Traffic** — Assume humans and AI agents coexist. Agents make 10-100x more requests, follow programmatic patterns (no diurnal cycle), and consume resources differently. Consider: agent identity classification, cost-weighted rate limiting, separate human/agent queues, and behavioral fingerprinting. Reference: `CURVEBALLS_AGENTS.md` in each system directory.
   - e.g., "Payment processing is out of scope".
 
 **How to think:** Ask yourself — *"What would make this system unusable if missing?"* Those are your functional requirements. Then ask *"What would make this system fail under load or change?"* — those are non-functional.
@@ -107,6 +108,7 @@ Cache cache = new Cache(policy);
 | **State change** | "Bookings can now be cancelled or modified" |
 | **Observability** | "Log every state change for audit purposes" |
 | **Integration** | "Send a notification when a spot is booked" |
+| **AI Agent coexistence** | "AI agents now generate 80% of API traffic. How does your system adapt?" (See `CURVEBALLS_AGENTS.md` in each system for detailed scenarios) |
 
 **How to evaluate your design:** If a curveball requires you to modify an existing class (not just add a new one), your original design likely violated OCP. Refactor and note the lesson.
 
