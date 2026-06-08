@@ -33,22 +33,29 @@ public class OrderBookEngine {
     }
 
     public Future<Void> placeOrder(Order order) {
+        ExecutorService executorForCurrentSymbol = getExecutorForCurrentSymbol(order.getSymbol());
+        OrderBook orderBookForCurrentSymbol = getBookForCurrentSymbol(order.getSymbol());
         return CompletableFuture.runAsync(
-                () -> bookFor(order.getSymbol()).placeOrder(order),
-                executorFor(order.getSymbol()));
+                () -> orderBookForCurrentSymbol.placeOrder(order),
+            executorForCurrentSymbol);
     }
 
     public Future<Void> cancelOrder(String symbol, String orderId) {
+        OrderBook orderBookForCurrentSymbol = getBookForCurrentSymbol(symbol);
         return CompletableFuture.runAsync(
-                () -> bookFor(symbol).cancelOrder(orderId),
-                executorFor(symbol));
+                () -> orderBookForCurrentSymbol.cancelOrder(orderId),
+                getExecutorForCurrentSymbol(symbol));
     }
 
     public void shutdown() {
+        for(ExecutorService executorService : executors.values()) {
+            executorService.shutdown();
+        }
+        // It's the same thing.
         executors.values().forEach(ExecutorService::shutdown);
     }
 
-    private ExecutorService executorFor(String symbol) {
+    private ExecutorService getExecutorForCurrentSymbol(String symbol) {
         return executors.computeIfAbsent(symbol, s -> Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "orderbook-" + s);
             t.setDaemon(true);
@@ -56,7 +63,7 @@ public class OrderBookEngine {
         }));
     }
 
-    private OrderBook bookFor(String symbol) {
+    private OrderBook getBookForCurrentSymbol(String symbol) {
         return books.computeIfAbsent(symbol, s -> new OrderBook(s, listener));
     }
 }
