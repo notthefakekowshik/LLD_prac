@@ -37,7 +37,9 @@ public class LFUCache<K, V> {
                     EvictionPolicy<K> evictionPolicy,
                     WriteBehindBuffer<K, V> writeBehindBuffer,
                     long ttlSweepIntervalMillis) {
-        if (capacity <= 0) throw new CacheException("Capacity must be > 0");
+        if (capacity <= 0) {
+            throw new CacheException("Capacity must be > 0");
+        }
         this.capacity = capacity;
         this.store = new ConcurrentHashMap<>();
         this.evictionPolicy = evictionPolicy;
@@ -69,7 +71,9 @@ public class LFUCache<K, V> {
         } else {
             if (store.size() >= capacity) {
                 K victim = evictionPolicy.evictKey();
-                if (victim == null) throw new CacheException("Eviction returned null at capacity " + capacity);
+                if (victim == null) {
+                    throw new CacheException("Eviction returned null at capacity " + capacity);
+                }
                 store.remove(victim);
             }
             store.put(key, new CacheEntry<>(value, ttlMillis));
@@ -81,7 +85,9 @@ public class LFUCache<K, V> {
     /** Returns null on cache miss, absent key, or expired entry. */
     public synchronized V get(K key) {
         CacheEntry<V> entry = store.get(key);
-        if (entry == null) return null;
+        if (entry == null) {
+            return null;
+        }
         if (entry.isExpired()) {
             System.out.println("  [TTL] Key expired on access: " + key);
             evict(key);

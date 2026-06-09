@@ -35,7 +35,9 @@ public class O1LFUEvictionPolicy<K> implements EvictionPolicy<K> {
             bucket.remove(key);
             if (bucket.isEmpty()) {
                 freqBuckets.remove(freq);
-                if (minFreq == freq) minFreq = freq + 1;
+                if (minFreq == freq) {
+                    minFreq = freq + 1;
+                }
             }
         } else {
             // New key insertion: minimum frequency resets to 1
@@ -50,7 +52,9 @@ public class O1LFUEvictionPolicy<K> implements EvictionPolicy<K> {
     @Override
     public synchronized K evictKey() {
         LinkedHashSet<K> minBucket = freqBuckets.get(minFreq);
-        if (minBucket == null || minBucket.isEmpty()) return null;
+        if (minBucket == null || minBucket.isEmpty()) {
+            return null;
+        }
         K victim = minBucket.iterator().next(); // LRU tiebreak: oldest entry in bucket
         removeKey(victim);
         return victim;
@@ -58,8 +62,15 @@ public class O1LFUEvictionPolicy<K> implements EvictionPolicy<K> {
 
     @Override
     public synchronized void removeKey(K key) {
+        // If you use this, it's like two lookups which could have been combined in one lookup. So, remove and if freq == null check makes sense.
+        // But both are same thing.
+//        if (!keyFreq.containsKey(key)) {
+//            return;
+//        }
         Integer freq = keyFreq.remove(key);
-        if (freq == null) return;
+        if (freq == null) {
+            return;
+        }
         LinkedHashSet<K> bucket = freqBuckets.get(freq);
         if (bucket != null) {
             bucket.remove(key);
