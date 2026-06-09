@@ -114,7 +114,7 @@ com.lldprep.foundations/
   - Strategy, Observer, Command, State, Template Method, Iterator, Chain of Responsibility
 
 ### Phase 3: Building Blocks
-- [x] In-Memory Cache (LRU via Strategy) — *Completed 2026-03-24*
+- [x] In-Memory Cache (LRU + LFU via Strategy) — *Completed 2026-03-24; LFU O(1) + TTL + write-behind added 2026-06-09*
 - [x] Custom Thread Pool
 - [x] Rate Limiter (Token Bucket + Leaky Bucket)
 - [x] Logging Framework
