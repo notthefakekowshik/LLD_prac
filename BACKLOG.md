@@ -13,8 +13,8 @@ Pick these up between implementation sprints.
 
 | # | Issue | Impact | Status |
 |---|-------|--------|--------|
-| 1 | **CLAUDE.md roadmap section** — Shows `[ ]` for Phase 1 SOLID exercises, Phase 3 building blocks (ThreadPool, RateLimiter, Logging, TaskScheduler), and Phase 4 systems (ParkingLot, MovieBooking, VendingMachine, ATM) — all completed in core-lld. New AI sessions get wrong completion state. | High — fresh sessions start with incorrect context | Not Started |
-| 2 | **PATTERNS.md Iterator + Chain of Responsibility** — Both show `[ ] Implemented` but have full good/bad examples in `core-lld/src/.../foundations/behavioral/`. Iterator: in-order/pre-order/post-order with BinaryTree. CoR: ConsoleHandler → FileHandler → EmailAlertHandler. | Medium — documentation says "missing" when code exists | Not Started |
+| 1 | **CLAUDE.md roadmap section** — Shows `[ ]` for Phase 1 SOLID exercises, Phase 3 building blocks (ThreadPool, RateLimiter, Logging, TaskScheduler), and Phase 4 systems (ParkingLot, MovieBooking, VendingMachine, ATM) — all completed in core-lld. New AI sessions get wrong completion state. | High — fresh sessions start with incorrect context | Done ✅ 2026-06-08 |
+| 2 | **PATTERNS.md Iterator + Chain of Responsibility** — Both show `[ ] Implemented` but have full good/bad examples in `core-lld/src/.../foundations/behavioral/`. Iterator: in-order/pre-order/post-order with BinaryTree. CoR: ConsoleHandler → FileHandler → EmailAlertHandler. | Medium — documentation says "missing" when code exists | Done ✅ — already `[x]` in PATTERNS.md |
 | 3 | **ROADMAP.md Phase 4** — Splitwise, Chess, SnakeLadder, Hotel, Library correctly show `[ ]` (genuinely unimplemented). Need to verify no other stale checkmarks exist. | Low — appears accurate after last sync | Not Started |
 
 ---
@@ -46,7 +46,7 @@ Pick these up between implementation sprints.
 
 | Priority | Count | What |
 |----------|-------|------|
-| 🔴 Meta | 3 | Stale checkboxes in CLAUDE.md, PATTERNS.md |
+| 🔴 Meta | 1 | Stale ROADMAP.md Phase 4 checkmarks (verify no other staleness) |
 | 🟡 Quality | 4 | Missing docs, no tests, no concurrency proofs |
 | 🟢 Nice to have | 5 | Pattern composition, interview pitfalls, practice stubs |
 

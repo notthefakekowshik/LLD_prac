@@ -26,8 +26,8 @@ public class Order {
     private final String  id;
     private final String  symbol;
     private final Side    side;
-    private final Type    type;
-    private final double  price;        // ignored for MARKET orders
+    private       Type    type;
+    private       double  price;        // ignored for MARKET orders; set on MTL conversion
     private final Instant placedAt;
     private final long    sequence;     // global insertion order for time-priority
 
@@ -55,6 +55,12 @@ public class Order {
 
     public void cancel() {
         status = Status.CANCELLED;
+    }
+
+    // MTL: called when a partially-filled market order converts to a resting limit order
+    public void convertToLimit(double limitPrice) {
+        this.type  = Type.LIMIT;
+        this.price = limitPrice;
     }
 
     // ----- accessors -----

@@ -106,10 +106,12 @@ com.lldprep.foundations/
 - [x] UML: Class Diagram + Sequence Diagram
 
 ### Phase 2: Design Patterns
-**Creational:** ✅ All 5 patterns completed with comprehensive good/bad examples
-  - Singleton (7 variations), Factory (3 types), Abstract Factory, Builder (4 variants), Prototype  
-**Structural:** Adapter, Bridge, Decorator, Facade, Flyweight, Proxy (next)
-**Behavioral:** Strategy, Observer, Command, State, Template Method, Iterator, Chain of Responsibility
+**Creational:** ✅ All 5 patterns completed — `foundations/creational/`
+  - Singleton (7 variations), Factory (3 types), Abstract Factory, Builder (4 variants), Prototype
+**Structural:** ✅ All 6 patterns completed — `foundations/structural/`
+  - Adapter, Bridge, Decorator, Facade, Flyweight, Proxy
+**Behavioral:** ✅ All 7 patterns completed — `foundations/behavioral/`
+  - Strategy, Observer, Command, State, Template Method, Iterator, Chain of Responsibility
 
 ### Phase 3: Building Blocks
 - [x] In-Memory Cache (LRU via Strategy) — *Completed 2026-03-24*
@@ -119,13 +121,15 @@ com.lldprep.foundations/
 - [x] Task Scheduler
 
 ### Phase 4: Machine Coding Problems
+- [x] Order Book Engine
+- [x] Symbol Search Engine
 - [x] Parking Lot System
-- [x] Movie Booking System (BookMyShow)
-- [ ] Splitwise
-- [ ] Snake and Ladder
-- [ ] Chess
 - [x] Vending Machine
 - [x] ATM Machine
+- [x] Movie Booking System (BookMyShow)
+- [ ] Splitwise
+- [ ] Chess
+- [ ] Snake and Ladder
 - [ ] Hotel Management System
 - [ ] Library Management System
 
@@ -159,3 +163,11 @@ com.lldprep.foundations/
 - `PATTERNS.md` — Design pattern catalog (consult before writing custom logic)
 - `PATTERNS_DECISION_TREE.md` — When to use which pattern
 - `QUICK_PATTERN_REFERENCE.md` — 2-minute pattern cheat sheet for interviews
+- `LLD_ROI.md` — 40 LLD problems ranked by ROI with pattern breakdown and attack order
+
+## Related Repositories
+
+| Repo | Path | Purpose |
+|------|------|---------|
+| DSA POTD | `/Volumes/Crucial_X9/DSA_POTD` | Daily algorithm problems — maintenance mode (1 easy/medium every 2 days) |
+| HLD Prep | `/Volumes/Crucial_X9/HLD_prep` | System design — Phases 1–5, SCALE framework, concept deep dives |

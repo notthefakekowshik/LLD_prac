@@ -25,10 +25,10 @@ import java.util.concurrent.ThreadLocalRandom;
 public class OrderBookDemo {
 
     public static void main(String[] args) throws InterruptedException {
-        demo1_BasicMatch();
-        demo2_PartialFill();
-        demo3_Cancel();
-        demo4_MarketOrder();
+//        demo1_BasicMatch();
+//        demo2_PartialFill();
+//        demo3_Cancel();
+//        demo4_MarketOrder();
         demo5_ConcurrentProducers();
     }
 

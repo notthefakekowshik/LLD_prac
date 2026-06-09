@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(mvn compile:*)",
-      "Bash(mvn exec:java *)"
+      "Bash(mvn exec:java *)",
+      "Read(//Volumes/Crucial_X9/DSA_POTD/**)",
+      "Read(//Volumes/Crucial_X9/HLD_prep/**)"
     ]
   }
 }

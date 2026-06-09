@@ -76,17 +76,27 @@ public class OrderBook {
     }
 
     private void matchMarket(Order incoming) {
-        if (incoming.getSide() == Order.Side.BUY) {
-            matchBuyAgainstAsks(incoming);
-        } else {
-            matchSellAgainstBids(incoming);
-        }
+        double lastFillPrice = (incoming.getSide() == Order.Side.BUY)
+                ? matchBuyAgainstAsks(incoming)
+                : matchSellAgainstBids(incoming);
+
         if (incoming.getRemainingQty() > 0) {
-            System.out.printf("  [MARKET UNFILLED] %d qty discarded%n", incoming.getRemainingQty());
+            if (lastFillPrice > 0) {
+                // MTL: partially filled — rest the remainder as a limit at the last fill price
+                incoming.convertToLimit(lastFillPrice);
+                NavigableMap<Double, Deque<Order>> book = (incoming.getSide() == Order.Side.BUY) ? bids : asks;
+                addToBook(book, lastFillPrice, incoming);
+                listener.onOrderAccepted(incoming);
+            } else {
+                // Book was empty — no price reference, discard
+                System.out.printf("  [MARKET UNFILLED] %d qty discarded — empty book%n", incoming.getRemainingQty());
+            }
         }
     }
 
-    private void matchBuyAgainstAsks(Order buy) {
+    // Returns last fill price, or 0.0 if no fills occurred
+    private double matchBuyAgainstAsks(Order buy) {
+        double lastFillPrice = 0.0;
         while (buy.getRemainingQty() > 0 && !asks.isEmpty()) {
             Map.Entry<Double, Deque<Order>> entry = asks.firstEntry();
             double bestAskPrice = entry.getKey();
@@ -100,6 +110,7 @@ public class OrderBook {
 
             buy.fill(fillQty);
             resting.fill(fillQty);
+            lastFillPrice = bestAskPrice;
             listener.onTrade(new MatchResult(symbol, buy.getId(), resting.getId(), priceToCents(bestAskPrice), fillQty));
 
             if (resting.getRemainingQty() == 0) {
@@ -109,9 +120,12 @@ public class OrderBook {
                 }
             }
         }
+        return lastFillPrice;
     }
 
-    private void matchSellAgainstBids(Order sell) {
+    // Returns last fill price, or 0.0 if no fills occurred
+    private double matchSellAgainstBids(Order sell) {
+        double lastFillPrice = 0.0;
         while (sell.getRemainingQty() > 0 && !bids.isEmpty()) {
             Map.Entry<Double, Deque<Order>> entry = bids.firstEntry();
             double bestBidPrice = entry.getKey();
@@ -125,6 +139,7 @@ public class OrderBook {
 
             sell.fill(fillQty);
             resting.fill(fillQty);
+            lastFillPrice = bestBidPrice;
             listener.onTrade(new MatchResult(symbol, resting.getId(), sell.getId(), priceToCents(bestBidPrice), fillQty));
 
             if (resting.getRemainingQty() == 0) {
@@ -134,6 +149,7 @@ public class OrderBook {
                 }
             }
         }
+        return lastFillPrice;
     }
 
     private void addToBook(NavigableMap<Double, Deque<Order>> side, double price, Order order) {
