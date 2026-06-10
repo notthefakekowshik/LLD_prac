@@ -1,6 +1,6 @@
 # Concurrent Collections Theory
 
-Thread-safe collections with fine-grained synchronization — far superior to wrapping with `Collections.synchronizedXxx()`.
+Older consolidated reference — prefer the family files (`Concurrent_Maps.md`, `Concurrent_Sets.md`, `Concurrent_Lists.md`, `Concurrent_Queues.md`) for current coverage. This file remains useful for the `DelayQueue` deep dive and CHM internals summary.
 
 ---
 

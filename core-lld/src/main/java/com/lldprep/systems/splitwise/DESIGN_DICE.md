@@ -15,7 +15,7 @@ Follows the D.I.C.E. workflow from `INSTRUCTIONS.md`.
 4. A user can **view their balances** — who owes them, and who they owe, with net amounts.
 5. A user can **settle up** with another user — record a direct payment to reduce a balance.
 6. A user can **view expense history** — all expenses they are part of, chronologically.
-7. The system can **simplify debts** — reduce a complex web of balances into the minimum number of transactions required to settle everyone.
+7. The system can **simplify debts** — reduce a complex web of balances into standard greedy settlement suggestions.
 8. A user can **view group balances** — net balances for all members within a specific group.
 
 ### Non-Functional Requirements
@@ -32,6 +32,7 @@ Follows the D.I.C.E. workflow from `INSTRUCTIONS.md`.
 - Currency is a single unit (no multi-currency conversion).
 - Maximum group size: 50 members.
 - Expense amounts are `BigDecimal` — never `double` for money.
+- Money is scale 2; equal and percentage splits assign rounding remainder to the final participant.
 
 ### Out of Scope
 
@@ -81,7 +82,7 @@ Settlement ──from/to──► User     (N:1 each way, Association)
 |---------|-------|-----|
 | **Strategy** | `SplitStrategy` — `EqualSplitStrategy`, `ExactSplitStrategy`, `PercentageSplitStrategy` | Adding a new split type (Ratio, Shares-based) = new class only. Zero changes to `Expense` or `ExpenseService`. |
 | **Factory** | `SplitStrategyFactory.get(SplitType)` | Centralises strategy creation. Caller never uses `new ConcreteStrategy()`. |
-| **Observer** | `BalanceUpdateListener` — notified after every expense or settlement | Decouples balance change reactions (audit log, future notification). |
+| **Observer** | `SplitwiseEventListener` implementations registered on `SplitwiseFacade` | Decouples balance change reactions (audit log, future notification). |
 | **Repository** | `UserRepository`, `GroupRepository`, `ExpenseRepository` | In-memory stores, swappable for DB. Keeps service layer free of storage concerns. |
 | **Facade** | `SplitwiseFacade` | Single entry point: `addExpense()`, `settle()`, `getBalance()`, `simplifyDebts()`. Hides expense, balance, and split services. |
 
@@ -208,7 +209,7 @@ classDiagram
         +findByGroup(groupId) List~Expense~
     }
 
-    class BalanceUpdateListener {
+    class SplitwiseEventListener {
         <<interface>>
         +onExpenseAdded(expense) void
         +onSettlementRecorded(settlement) void
@@ -234,14 +235,14 @@ classDiagram
     ExpenseService --> BalanceService : uses
     ExpenseService --> SplitStrategyFactory : uses
 
-    BalanceUpdateListener <|.. SplitwiseFacade : notifies
+    SplitwiseFacade --> SplitwiseEventListener : notifies
 ```
 
 ---
 
 ## Step 4 — CORE ALGORITHM: Debt Simplification
 
-This is the **DSA core** of the system. Without it, settling a chain of debts requires N-1 payments. With it, the minimum number of payments is computed.
+This is the **DSA core** of the system. It converts noisy pairwise balances into a compact read-only settlement suggestion.
 
 ### Problem
 
@@ -322,6 +323,8 @@ balances[Charlie][Alice] += 100   →  Charlie owes Alice ₹100
 balances[Bob][Alice] -= 100   →  Bob no longer owes Alice
 ```
 
+Settlement invariant: payer must currently owe payee, and amount must not exceed outstanding payer → payee balance.
+
 **Thread safety:** `BalanceService` holds a `ConcurrentHashMap<String, ConcurrentHashMap<String, BigDecimal>>`. Each balance update is wrapped in `synchronized(balancePairLock(userA, userB))` — a dedicated lock per ordered user pair — to prevent concurrent addExpense calls from corrupting the same balance entry.
 
 ---
@@ -359,7 +362,13 @@ synchronized (getLock(split.userId, expense.paidBy.getId())) {
 | `addExpense` | `synchronized` per ordered user pair during balance update |
 | `settle` | `synchronized` on the same ordered pair lock |
 | `getBalance` | `ConcurrentHashMap` read — no lock needed |
-| `simplifyDebts` | Snapshot balance map first, compute on snapshot |
+| `getBalanceSummary` | Weakly consistent snapshot — acceptable for display |
+| `simplifyDebts` | Weakly consistent snapshot — read-only suggestion, not a transaction boundary |
+
+### Known Trade-offs
+
+- **Pair lock lifecycle:** `pairLocks` keeps one monitor per unique user pair and does not remove it when balance returns to zero. This avoids unsafe lock replacement while another thread may be waiting. Production designs can use striped locks or reference-counted lock cleanup.
+- **Snapshot consistency:** summary/simplification snapshots can miss concurrent writes. They are intentionally query-time views, not settlement commits.
 
 ---
 
@@ -381,7 +390,7 @@ synchronized (getLock(split.userId, expense.paidBy.getId())) {
 |-----------|-------------------|---------|
 | **New split type: Ratio** (Alice:Bob:Charlie = 2:3:5) | New `RatioSplitStrategy implements SplitStrategy`. Zero changes to Expense or facade. | Strategy (OCP) |
 | **Multi-currency** | `Expense` gains `Currency currency`; `BalanceService` gains `CurrencyConverter` dependency; simplification runs per currency or converts first | Strategy (`CurrencyConversionStrategy`) |
-| **Notifications on expense add** | `BalanceUpdateListener` implementations: `EmailNotifier`, `PushNotifier`. Register on facade construction. | Observer |
+| **Notifications on expense add** | `SplitwiseEventListener` implementations: `EmailNotifier`, `PushNotifier`. Register on facade construction. | Observer |
 | **Expense categories** (food, travel, rent) | `Expense` gains `Category category` enum. `ExpenseRepository.findByCategory()`. Zero changes to split logic. | |
 | **Expense comments / activity feed** | New `CommentService` — no changes to existing classes | SRP |
 | **Recurring expenses** | New `RecurringExpenseScheduler` — wraps `addExpense()` on a timer | Adapter / Decorator |
@@ -397,6 +406,6 @@ synchronized (getLock(split.userId, expense.paidBy.getId())) {
 - [x] Balance data structure and update convention documented
 - [x] Concurrency model documented (per-pair lock ordering to prevent deadlock)
 - [x] Patterns documented with "why" (Strategy, Factory, Observer, Repository, Facade)
-- [ ] Custom exceptions defined (SplitValidationException, UserNotFoundException, etc.)
-- [ ] Demo covers all 8 functional requirements
-- [ ] At least one curveball demonstrated
+- [x] Custom exceptions defined (SplitValidationException, UserNotFoundException, etc.)
+- [x] Demo covers all 8 functional requirements
+- [x] At least one curveball demonstrated

@@ -226,7 +226,7 @@ Content-Type: application/json
 |-------|------|----------|------------|
 | `payerUserId` | string | Yes | Must exist |
 | `payeeUserId` | string | Yes | Must exist, must differ from payer |
-| `amount` | decimal | Yes | > 0, should not exceed outstanding balance (warning, not error) |
+| `amount` | decimal | Yes | > 0, must not exceed outstanding payer → payee balance |
 
 **Success Response (201):**
 ```json
@@ -244,6 +244,7 @@ Content-Type: application/json
 | Status | Error Code | Message |
 |--------|-----------|---------|
 | 400 | `SELF_SETTLEMENT` | Payer and payee cannot be the same user |
+| 400 | `SETTLEMENT_EXCEEDS_BALANCE` | Settlement amount exceeds outstanding balance |
 | 404 | `USER_NOT_FOUND` | User usr_b4c5d6 does not exist |
 
 ---

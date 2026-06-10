@@ -4,7 +4,8 @@
       "Bash(mvn compile:*)",
       "Bash(mvn exec:java *)",
       "Read(//Volumes/Crucial_X9/DSA_POTD/**)",
-      "Read(//Volumes/Crucial_X9/HLD_prep/**)"
+      "Read(//Volumes/Crucial_X9/HLD_prep/**)",
+      "Bash(mv /Users/knarayanam/backup_folder/MY_FILES/LLD_prac/core-lld/src/main/java/com/lldprep/systems/splitwise/service/BalanceUpdateListener.java /Users/knarayanam/backup_folder/MY_FILES/LLD_prac/core-lld/src/main/java/com/lldprep/systems/splitwise/service/SplitwiseEventListener.java)"
     ]
   }
 }

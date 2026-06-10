@@ -134,7 +134,9 @@ erDiagram
 
 **Index:** `(payer_id, payee_id)` — to compute net settlement between a pair.
 
-**Business Rule:** `payer_id != payee_id` — enforced by a `CHECK` constraint.
+**Business Rules:**
+- `payer_id != payee_id` — enforced by a `CHECK` constraint.
+- Settlement amount must not exceed the outstanding payer → payee balance — enforced by application logic.
 
 ---
 
@@ -144,10 +146,13 @@ Balances are **not stored** — they are derived on read. This avoids the synchr
 
 ```sql
 -- Net amount user_A owes user_B:
--- (what A owes from splits where B paid) - (what B owes from splits where A paid)
+-- expense debt A->B - expense debt B->A - settlements A->B + settlements B->A
 
 SELECT
-    COALESCE(owe.amount, 0) - COALESCE(owed.amount, 0) AS net_balance
+    COALESCE(owe.amount, 0)
+  - COALESCE(owed.amount, 0)
+  - COALESCE(paid.amount, 0)
+  + COALESCE(received.amount, 0) AS net_balance
 FROM
     (SELECT SUM(s.amount) AS amount
      FROM expense_splits s
@@ -157,7 +162,15 @@ FROM
     (SELECT SUM(s.amount) AS amount
      FROM expense_splits s
      JOIN expenses e ON s.expense_id = e.id
-     WHERE s.user_id = :userB AND e.paid_by_user_id = :userA) AS owed;
+     WHERE s.user_id = :userB AND e.paid_by_user_id = :userA) AS owed,
+
+    (SELECT SUM(amount) AS amount
+     FROM settlements
+     WHERE payer_id = :userA AND payee_id = :userB) AS paid,
+
+    (SELECT SUM(amount) AS amount
+     FROM settlements
+     WHERE payer_id = :userB AND payee_id = :userA) AS received;
 -- Positive result → userA owes userB that amount
 -- Negative result → userB owes userA |result|
 ```
@@ -171,7 +184,7 @@ FROM
 | Scenario | In-Memory | Database |
 |----------|-----------|----------|
 | Add expense | `synchronized` on ordered user pair lock per balance entry | `BEGIN; INSERT INTO expenses; INSERT INTO expense_splits (N rows); COMMIT;` — single transaction, no balance table to update |
-| Settle up | `synchronized` on ordered pair lock | `BEGIN; INSERT INTO settlements; COMMIT;` |
+| Settle up | `synchronized` on ordered pair lock; reject over-settlement | `BEGIN; validate outstanding balance; INSERT INTO settlements; COMMIT;` |
 | Read balance | `ConcurrentHashMap` read (no lock) | `SELECT` with index scan — no lock needed; derive from splits + settlements |
 | Simplify debts | Snapshot balances; compute greedy on snapshot | Run the balance derivation query for all users in group; compute greedy in application |
 | Concurrent addExpense (same pair) | Per-pair lock prevents interleaving | Database transaction serialises via row-level locks on `expense_splits` |

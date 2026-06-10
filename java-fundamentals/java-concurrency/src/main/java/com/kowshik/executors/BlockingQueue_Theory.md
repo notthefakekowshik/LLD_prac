@@ -22,6 +22,55 @@ Depending on how you want to handle operations that cannot immediately be satisf
 
 - **`put()` and `take()`** are the most commonly used methods for a true producer-consumer blocking mechanism.
 
+> **⚠️ put() and take() block INDEFINITELY** — no timeout. If the queue is full, `put()` waits forever for space. If empty, `take()` waits forever for an element. This is fine for simple producer-consumer demos, but in real systems you almost always want `poll(timeout)` so the consuming thread can periodically check a shutdown flag. Example: `WriteBehindBuffer.flushLoop()` uses `poll(100ms)` instead of `take()` so it can exit cleanly on `shutdown()`. If it used `take()`, the flusher thread would hang on an empty queue and never notice it's supposed to stop.
+
+### drainTo — Batch Drain (Critical for Performance)
+
+`drainTo(collection)` and `drainTo(collection, maxElements)` are bulk removal methods that deserve their own explanation because they are the most efficient way to consume from a BlockingQueue.
+
+**What it does:** Atomically removes all available elements (up to `maxElements`) from the queue and adds them to the given collection — all under a **single lock acquisition**.
+
+**Why it matters:** Calling `poll()` in a loop acquires and releases the lock once per element. With N items, that's N lock acquisitions. `drainTo` acquires the lock once, transfers everything, then releases. For high-throughput consumers (log flushers, write-behind buffers, batch processors), this is a massive win.
+
+**Example — poll() loop vs drainTo():**
+
+```java
+BlockingQueue<String> queue = new LinkedBlockingQueue<>();
+// ... 1000 items enqueued ...
+
+// ❌ BAD: 1000 lock acquisitions
+List<String> batch1 = new ArrayList<>();
+for (int i = 0; i < 1000; i++) {
+    String item = queue.poll();
+    if (item == null) break;
+    batch1.add(item);
+}
+
+// ✅ GOOD: 1 lock acquisition
+List<String> batch2 = new ArrayList<>();
+queue.drainTo(batch2, 1000);
+```
+
+**Common pattern — poll-then-drain (used in WriteBehindBuffer):**
+
+```java
+// Block briefly for the first item (avoid busy-wait on empty queue),
+// then drain the rest in a single atomic sweep.
+String head = queue.poll(100, TimeUnit.MILLISECONDS);
+if (head != null) {
+    List<String> batch = new ArrayList<>();
+    batch.add(head);
+    queue.drainTo(batch, batchSize - 1);  // scoop up whatever else is waiting
+    processBatch(batch);
+}
+```
+
+**Key points:**
+- `drainTo` is non-blocking — if the queue is empty, it returns immediately with an empty collection.
+- It does NOT throw `InterruptedException`.
+- On `ArrayBlockingQueue`, it uses the single lock (blocks both producers and consumers briefly while draining).
+- On `LinkedBlockingQueue`, it uses the `takeLock` only — producers can still enqueue while drain is in progress.
+
 ---
 
 ## 2. ArrayBlockingQueue

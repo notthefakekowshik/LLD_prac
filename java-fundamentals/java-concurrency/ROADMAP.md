@@ -160,10 +160,15 @@ The high-level utilities you use in production every day. Master all of them.
 ### 3.5 Concurrent Collections
 | File | What it covers |
 |---|---|
+| `collections/Concurrent_Collections_Index.md` | Entry point for map/set/list/queue concurrent collection notes |
+| `collections/Concurrent_Maps.md` | `ConcurrentHashMap`, `ConcurrentSkipListMap`: use cases, examples, traps |
+| `collections/Concurrent_Sets.md` | `newKeySet`, `CopyOnWriteArraySet`, `ConcurrentSkipListSet`: use cases, examples, traps |
+| `collections/Concurrent_Lists.md` | `CopyOnWriteArrayList`: listener-style use cases and traps |
+| `collections/Concurrent_Queues.md` | non-blocking queues and blocking queues: back-pressure, examples, traps |
 | `collections/ConcurrentHashMapDemo.java` | Java 8 node-level locking; `computeIfAbsent`; no null keys |
 | `collections/ConcurrentSkipListMapDemo.java` | Lock-free sorted map; skip list structure; use cases |
 
-**Theory:** `collections/Collections_Theory.md`
+**Theory:** `collections/Concurrent_Collections_Index.md`, family-specific notes, `collections/Collections_Theory.md`
 
 **Interview checkpoint:** Explain lock striping in `ConcurrentHashMap`. Why is `ConcurrentSkipListMap` preferred over a `Collections.synchronizedMap(new TreeMap())`?
 

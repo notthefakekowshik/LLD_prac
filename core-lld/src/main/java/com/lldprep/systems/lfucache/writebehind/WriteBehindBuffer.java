@@ -43,12 +43,37 @@ public class WriteBehindBuffer<K, V> {
         queue.offer(new WriteBehindTask<>(key, value));
     }
 
+    /**
+     * Continuous batch-drain loop running in a daemon thread.
+     *
+     * BlockingQueue methods used in this method:
+     *
+     *   poll(timeout, unit)
+     *     Waits up to the given time for an element. Returns null if the timeout
+     *     elapses with no element available. Non-blocking beyond the timeout.
+     *     We use it (over take()) so the loop can periodically check `running`
+     *     and exit during shutdown instead of blocking forever on an empty queue.
+     *
+     *   drainTo(collection, maxElements)
+     *     Atomically removes up to maxElements from the queue and adds them to
+     *     the given collection — all under a SINGLE lock acquisition. Much more
+     *     efficient than calling poll() in a loop (which would acquire and release
+     *     the lock N times). After the first poll() confirms there's work, drainTo
+     *     scoops up any additional items that arrived between the poll and now.
+     *
+     * Flow:
+     *   - Block up to 100ms waiting for the first item.
+     *   - If timeout elapses with no item → loop back (check running flag).
+     *   - If item arrives → drain up to batchSize items, flush all to BackingStore.
+     *   - On InterruptedException (shutdown signal) → exit loop.
+     */
     private void flushLoop() {
         while (running || !queue.isEmpty()) {
             try {
-                // Block up to 100ms for first item; then drain up to batchSize in one go
                 WriteBehindTask<K, V> head = queue.poll(100, TimeUnit.MILLISECONDS);
-                if (head == null) continue;
+                if (head == null) {
+                    continue;
+                }
 
                 List<WriteBehindTask<K, V>> batch = new ArrayList<>(batchSize);
                 batch.add(head);

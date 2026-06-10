@@ -4,6 +4,46 @@ This document defines the mandatory workflow for every Low-Level Design (LLD) an
 
 ---
 
+## 0. Strong Hire Decision Lens
+
+D.I.C.E. is the operating system. Strong hire signal comes from explaining the decisions behind the design, not just producing classes.
+
+Before coding, explicitly identify:
+
+| Decision | Question to Ask | Strong Signal |
+|---|---|---|
+| **Invariant** | What must never become invalid? | Entity/service enforces rule at the right boundary |
+| **Extension Axis** | What is most likely to change? | Strategy/policy/state/factory introduced only for real variation |
+| **State Owner** | Who owns this data and lifecycle? | Entity owns local state, repository owns storage, service coordinates workflow |
+| **Consistency Boundary** | What operation must be atomic? | Critical section/lock/transaction boundary is named |
+| **Error Taxonomy** | What can fail, and is it recoverable? | Domain-specific exceptions, no catch-all swallowing |
+| **Trade-off** | What did this design make easier/harder? | Clear reasoning instead of pattern dumping |
+
+Use this interview narration:
+
+1. "Key invariant is ..."
+2. "Likely extension axis is ..."
+3. "I will isolate it behind ..."
+4. "State owner is ..."
+5. "Thread-safety boundary is ..."
+6. "Curveball should add a new class, not edit existing classes."
+
+Pattern selection rule:
+
+- Start from variation point → choose pattern.
+- Do not start from pattern → force problem into it.
+
+Example:
+
+- If algorithm changes → Strategy.
+- If lifecycle behavior changes by state → State.
+- If object creation varies → Factory / Abstract Factory.
+- If side effects need fan-out → Observer.
+- If validation/processing is ordered and extensible → Chain of Responsibility.
+- If flow is fixed but steps vary → Template Method.
+
+---
+
 ## 1. The D.I.C.E. Workflow
 
 Every problem must follow this iterative design lifecycle:

@@ -7,10 +7,11 @@ Expense splitting system demonstrating **Strategy**, **Factory**, **Observer**, 
 - **Register users** and organise them into groups
 - **Add expenses** with three split types: Equal, Exact, Percentage
 - **Real-time balances** — O(1) lookup per user pair via in-memory balance map
-- **Settle up** — record a direct payment to reduce a balance
-- **Debt simplification** — greedy minimum-cash-flow algorithm reduces N debts to fewest transactions
+- **Settle up** — record a direct payment to reduce a balance; over-settlement is rejected
+- **Debt simplification** — standard greedy minimum-cash-flow suggestion reduces noisy balances into fewer transactions
 - **Group expenses** — scoped expenses with member validation
 - **Thread-safe** — per ordered-pair locks prevent concurrent expense additions from corrupting balances
+- **Money-safe** — `BigDecimal` scale 2; equal/percentage rounding remainder goes to final participant
 
 ## Design Patterns
 
@@ -18,7 +19,7 @@ Expense splitting system demonstrating **Strategy**, **Factory**, **Observer**, 
 |---------|---------------|---------|
 | **Strategy** | `SplitStrategy` → `EqualSplitStrategy`, `ExactSplitStrategy`, `PercentageSplitStrategy` | New split type = new class only. Zero changes to `Expense` or `ExpenseService`. |
 | **Factory** | `SplitStrategyFactory.get(SplitType)` | Centralises strategy instantiation; callers never use `new ConcreteStrategy()` |
-| **Observer** | `BalanceUpdateListener` | Decouples post-expense reactions (audit log, notifications) |
+| **Observer** | `SplitwiseEventListener` implementations registered on `SplitwiseFacade` | Decouples post-expense/settlement reactions (audit log, notifications) |
 | **Repository** | `UserRepository`, `GroupRepository`, `ExpenseRepository` | In-memory stores; swappable for DB |
 | **Facade** | `SplitwiseFacade` | Single entry point hiding expense, balance, and split complexity |
 
@@ -50,22 +51,28 @@ com.lldprep.systems.splitwise/
 ├── service/
 │   ├── SplitwiseFacade.java       # FACADE: single entry point
 │   ├── BalanceService.java        # balance map + simplification algorithm
-│   └── ExpenseService.java        # expense creation + split orchestration
+│   ├── ExpenseService.java        # expense creation + split orchestration
+│   └── SplitwiseEventListener.java # OBSERVER: receives balance events
 ├── repository/
 │   ├── UserRepository.java
 │   ├── GroupRepository.java
-│   └── ExpenseRepository.java
+│   ├── ExpenseRepository.java
+│   └── SettlementRepository.java
 ├── exception/
+│   ├── SplitwiseException.java
 │   ├── UserNotFoundException.java
 │   ├── GroupNotFoundException.java
-│   └── SplitValidationException.java
+│   ├── DuplicateEmailException.java
+│   ├── SplitValidationException.java
+│   ├── ExpenseValidationException.java
+│   └── InvalidSettlementException.java
 └── demo/
     └── SplitwiseDemo.java
 ```
 
 ## Core Algorithm — Debt Simplification
 
-Given N users with a complex web of debts, the system computes the minimum number of transactions to settle everyone using a greedy approach:
+Given N users with a complex web of debts, the system computes a standard greedy settlement suggestion:
 
 ```
 1. Compute net balance per user:
@@ -81,6 +88,8 @@ Given N users with a complex web of debts, the system computes the minimum numbe
 
 Complexity: O(n log n)
 ```
+
+This is read-only. It returns suggested settlements; it does not mutate balances.
 
 **Example:**
 ```
@@ -105,6 +114,11 @@ synchronized(lockMap.computeIfAbsent(lockKey, k -> new Object())) {
 
 **Why not lock the whole balance map?** That would serialise all expense additions across all user pairs — Alice adding an expense with Bob would block Charlie adding an expense with Dave, even though they share no state.
 
+### Known Trade-offs
+
+- Pair locks are retained for each unique user pair. This keeps monitor identity simple and safe for the interview implementation, but the map can grow with pair cardinality. Production would use striped locks or safe lock lifecycle management.
+- Balance summaries and debt simplification use a weakly consistent snapshot of `ConcurrentHashMap`. Good enough for display/read-only suggestions; not a transactional settlement boundary.
+
 ## Demo Scenarios
 
 1. **Equal split** — ₹900 dinner split 3 ways → ₹300 each
@@ -113,7 +127,7 @@ synchronized(lockMap.computeIfAbsent(lockKey, k -> new Object())) {
 4. **Balance summary** — Alice sees she is owed ₹300 by Bob and owes ₹200 to Charlie
 5. **Settle up** — Bob pays Alice ₹300 → balance zeroes
 6. **Group expense** — member validation: cannot add non-member to group expense
-7. **Simplify debts** — 5-person group reduced from 8 transactions to 4
+7. **Simplify debts** — read-only greedy suggestions
 8. **Concurrent expense addition** — two threads add expenses involving same pair → balances correct
 
 ## Extending the System
@@ -122,7 +136,7 @@ synchronized(lockMap.computeIfAbsent(lockKey, k -> new Object())) {
 |-----------|----------|
 | Ratio split (2:3:5) | New `RatioSplitStrategy implements SplitStrategy` — zero other changes |
 | Multi-currency | `CurrencyConversionStrategy`; `Expense` gains `Currency` field |
-| Notifications | `BalanceUpdateListener` implementations (email, push) |
+| Notifications | `SplitwiseEventListener` implementations (email, push) |
 | Expense categories | `Category` enum on `Expense`; new query on `ExpenseRepository` |
 | Recurring expenses | `RecurringExpenseScheduler` wraps `addExpense` on a timer |
 

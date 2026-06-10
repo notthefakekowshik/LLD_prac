@@ -10,6 +10,31 @@ Building extensible, maintainable, enterprise-grade Java systems for LLD/machine
 
 ---
 
+## Strong Hire Decision Lens
+
+D.I.C.E. is the mandatory structure, but strong interview signal comes from the decisions made inside it. For every LLD problem, explicitly reason about:
+
+- **Invariants** — rules that must never break, e.g., seat cannot be double-booked, balance cannot go negative, order cannot be fulfilled twice
+- **Extension axes** — what is most likely to change, e.g., pricing rule, allocation strategy, payment method, notification channel, validation chain, state transition
+- **Ownership boundaries** — entity owns local invariants, policy owns decisions, repository owns storage, service owns workflow, factory owns creation
+- **Consistency boundary** — which operation must be atomic/thread-safe, and what shared mutable state is protected
+- **Error taxonomy** — domain exceptions vs programming errors; never hide failure behind generic exceptions
+- **Abstraction timing** — introduce interface/pattern only when there is a real variation point or interview-relevant extension axis
+- **Trade-offs** — call out why this design is chosen and what it makes harder
+
+Interview phrasing pattern:
+
+1. "Key invariant is ..."
+2. "Likely extension axis is ..."
+3. "I will isolate it behind ..."
+4. "State owner is ..."
+5. "Thread-safety boundary is ..."
+6. "Curveball should add a new class, not edit existing classes."
+
+Strong hire marker: patterns are consequences of variation points, not starting points.
+
+---
+
 ## Mandatory Workflow: D.I.C.E.
 
 Every problem MUST follow these four steps in order:
