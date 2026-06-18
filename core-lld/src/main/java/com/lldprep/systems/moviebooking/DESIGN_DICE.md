@@ -35,10 +35,9 @@ Follows the D.I.C.E. workflow from `INSTRUCTIONS.md`.
 ### Out of Scope
 
 - User registration / authentication — user ID is passed in.
-- Email/SMS notification on booking.
+- Real Email/SMS notification — listener infrastructure exists (`BookingEventListener`), concrete `NotificationEventListener` is extensible but not implemented.
 - Real payment gateway integration.
 - Dynamic pricing by demand.
-- Seat category pricing (Gold/Silver/Platinum).
 - Cancellation refund policy.
 - Concession / food ordering.
 
@@ -84,7 +83,7 @@ User ──creates──► Booking (1:N)
 |---------|-------|-----|
 | **Strategy** | `SeatLockService` — lock expiry via `ScheduledExecutorService` or poll-on-access | Swap expiry strategy without touching booking logic |
 | **Facade** | `BookingFacade` — `searchShows()` → `lockSeats()` → `confirmBooking()` | Single entry point hides ShowService, SeatLockService, PaymentService, BookingService |
-| **Observer** | `BookingEventListener` — notify on booking confirmed/cancelled | Decouple post-booking actions (audit log, future notification) |
+| **Observer** | `BookingEventListener` → `AuditEventListener`, `LoyaltyEventListener` — notify on booking confirmed/cancelled | Decouple post-booking side-effects. New listeners = new classes, zero facade changes (OCP). |
 | **Repository** | `ShowRepository`, `TheaterRepository`, `BookingRepository` | In-memory data stores; swappable for DB later |
 
 ---
@@ -217,8 +216,20 @@ classDiagram
         +onBookingCancelled(booking) void
     }
 
+    class AuditEventListener {
+        -List~String~ auditLog
+        +onBookingConfirmed(booking) void
+        +onBookingCancelled(booking) void
+    }
+
+    class LoyaltyEventListener {
+        -Map~String, Integer~ balances
+        +onBookingConfirmed(booking) void
+        +onBookingCancelled(booking) void
+    }
+
     Theater "1" *-- "many" Screen : owns
-    Screen "1" o-- "many" Show : hosts
+    Screen "1" *-- "many" Show : hosts
     Show "1" o-- "many" Booking : generates
     Booking "1" *-- "many" Seat : contains
     Booking "1" *-- "1" Payment : has
@@ -226,8 +237,10 @@ classDiagram
     BookingFacade --> BookingRepository : uses
     BookingFacade --> SeatLockService : uses
     BookingFacade --> PaymentService : uses
+    BookingFacade --> BookingEventListener : notifies
     SeatLockService --> SeatLockInfo : manages
-    BookingEventListener <|.. BookingFacade : notifies
+    AuditEventListener ..|> BookingEventListener : implements
+    LoyaltyEventListener ..|> BookingEventListener : implements
 ```
 
 ---
@@ -279,12 +292,13 @@ That would serialize ALL seat operations on a show — a user checking seat A1 b
 
 ## Step 5 — IMPLEMENTATION ORDER (per INSTRUCTIONS.md)
 
-1. Enums: `City`, `SeatStatus`, `BookingStatus`
+1. Enums: `City`, `SeatStatus`, `BookingStatus`, `SeatCategory`
 2. Model entities: `Seat`, `Theater`, `Screen`, `Show`, `Booking`, `Payment`, `SeatLockInfo`
 3. Repository layer: `ShowRepository`, `BookingRepository`
 4. Service layer: `SeatLockService`, `PaymentService`
-5. Facade: `BookingFacade`
-6. Demo: `MovieBookingDemo`
+5. Listener layer: `BookingEventListener` (interface), `AuditEventListener`, `LoyaltyEventListener`
+6. Facade: `BookingFacade`
+7. Demo: `MovieBookingDemo`
 
 ---
 

@@ -8,6 +8,7 @@
 
 # design-philosophy
 - Solutions must be interview-appropriate — design for what can be reasoned about and coded in ~1 hour, not over-engineered production systems. Confidence: 0.85
+- Avoid over-abstracting with inner interfaces and static mock implementations — keep listener/observer classes simple and direct without unnecessary abstraction layers. Confidence: 0.70
 
 # implementation
 - When DESIGN.md specifies an entity, pattern, or class, fully wire it into the implementation — don't leave design artifacts (entities, listeners, enums) declared in design docs but unimplemented or unintegrated in code. Confidence: 0.70
@@ -20,3 +21,6 @@
 
 # system-design
 - When designing systems (HLD and LLD), always consider AI agents as first-class API consumers alongside humans. For existing implementations, add curveball scenarios testing agent traffic patterns (high-volume requests, programmatic retries, automated workflows, token-based rate limiting). This is a permanent design principle — humans and AI agents will coexist, and systems must be designed for that reality. Confidence: 0.85
+
+# critical-thinking
+- Design specs (like DESIGN_DICE.md) are not infallible — always cross-check facts, validate relationships, and identify mistakes rather than treating design documents as unquestionable source of truth. Confidence: 0.85

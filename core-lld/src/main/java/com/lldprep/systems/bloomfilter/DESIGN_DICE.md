@@ -180,7 +180,7 @@ classDiagram
 ## Step 4 — PACKAGE STRUCTURE
 
 ```
-com.lldprep.bloomfilter/
+com.lldprep.systems.bloomfilter/
 │
 ├── DESIGN_DICE.md                   ← this file
 ├── DESIGN.md                        ← original design (retained)

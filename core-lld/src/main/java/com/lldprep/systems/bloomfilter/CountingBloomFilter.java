@@ -145,9 +145,9 @@ public class CountingBloomFilter<T> {
     
     private int getPosition(T element, int hashIndex) {
         int hash = hashFunction.hash(element, hashIndex);
-        return Math.abs(hash % arraySize);
+        return (hash & Integer.MAX_VALUE) % arraySize;
     }
-    
+
     public int getElementCount() {
         return elementCount;
     }
@@ -224,3 +224,4 @@ public class CountingBloomFilter<T> {
         }
     }
 }
+

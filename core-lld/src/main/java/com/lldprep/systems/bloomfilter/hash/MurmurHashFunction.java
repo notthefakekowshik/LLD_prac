@@ -21,7 +21,7 @@ public class MurmurHashFunction<T> implements HashFunction<T> {
             return 0;
         }
         
-        byte[] data = element.toString().getBytes();
+        byte[] data = element.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
         return murmur3_32(data, seed ^ MURMUR_SEED);
     }
     

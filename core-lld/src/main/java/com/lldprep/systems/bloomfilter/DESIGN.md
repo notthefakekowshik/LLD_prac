@@ -270,7 +270,7 @@ where:
 ## Step 7: Package Structure
 
 ```
-com.lldprep.bloomfilter/
+com.lldprep.systems.bloomfilter/
     ├── DESIGN.md                    (this file)
     ├── README.md                    (usage examples, design choices)
     ├── model/

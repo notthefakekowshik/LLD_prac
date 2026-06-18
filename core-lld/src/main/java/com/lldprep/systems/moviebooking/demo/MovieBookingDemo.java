@@ -1,26 +1,23 @@
 package com.lldprep.systems.moviebooking.demo;
 
-import com.lldprep.systems.moviebooking.exception.BookingException;
 import com.lldprep.systems.moviebooking.exception.PaymentException;
-import com.lldprep.systems.moviebooking.model.Booking;
-import com.lldprep.systems.moviebooking.model.Screen;
-import com.lldprep.systems.moviebooking.model.Seat;
-import com.lldprep.systems.moviebooking.model.Show;
-import com.lldprep.systems.moviebooking.model.Theater;
+import com.lldprep.systems.moviebooking.model.*;
 import com.lldprep.systems.moviebooking.model.enums.BookingStatus;
 import com.lldprep.systems.moviebooking.model.enums.City;
 import com.lldprep.systems.moviebooking.model.enums.SeatCategory;
 import com.lldprep.systems.moviebooking.repository.BookingRepository;
 import com.lldprep.systems.moviebooking.repository.ShowRepository;
-import com.lldprep.systems.moviebooking.service.BookingEventListener;
 import com.lldprep.systems.moviebooking.service.BookingFacade;
 import com.lldprep.systems.moviebooking.service.PaymentService;
 import com.lldprep.systems.moviebooking.service.SeatLockService;
+import com.lldprep.systems.moviebooking.service.listener.AuditEventListener;
+import com.lldprep.systems.moviebooking.service.listener.LoyaltyEventListener;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 public class MovieBookingDemo {
@@ -29,7 +26,7 @@ public class MovieBookingDemo {
         System.out.println("╔══════════════════════════════════════════════════════════════╗");
         System.out.println("║            MOVIE BOOKING SYSTEM DEMONSTRATION                ║");
         System.out.println("║                                                              ║");
-        System.out.println("║  Patterns: Facade | Strategy | Observer (listener)          ║");
+        System.out.println("║  Patterns: Facade | Strategy | Observer (concrete listeners)║");
         System.out.println("╚══════════════════════════════════════════════════════════════╝\n");
 
         // ── Setup ──
@@ -39,6 +36,8 @@ public class MovieBookingDemo {
         PaymentService paymentService = new PaymentService();
         BookingFacade facade = new BookingFacade(showRepo, bookingRepo, lockService, paymentService);
 
+        // It used to be like this before
+        /*
         List<String> auditLog = new ArrayList<>();
         facade.addListener(new BookingEventListener() {
             public void onBookingConfirmed(Booking b) {
@@ -48,6 +47,13 @@ public class MovieBookingDemo {
                 auditLog.add("✗ CANCELLED " + b.getBookingId() + " | " + b.getShow().getMovieName());
             }
         });
+         */
+        // ── Concrete listeners (Observer pattern) ──
+        List<String> auditLog = new ArrayList<>();
+        Map<String, Integer> loyaltyBalances = new LinkedHashMap<>();
+
+        facade.addListener(new AuditEventListener(auditLog));
+        facade.addListener(new LoyaltyEventListener(loyaltyBalances));
 
         seedData(showRepo);
 
@@ -64,10 +70,18 @@ public class MovieBookingDemo {
         scenario10_Curveball_SeatCategories(facade);
 
         System.out.println("┌──────────────────────────────────────────────────────────────┐");
-        System.out.println("│ AUDIT LOG (via BookingEventListener)                        │");
+        System.out.println("│ AUDIT LOG (via AuditEventListener)                          │");
         System.out.println("└──────────────────────────────────────────────────────────────┘");
         for (String entry : auditLog) {
             System.out.println("  " + entry);
+        }
+        System.out.println();
+
+        System.out.println("┌──────────────────────────────────────────────────────────────┐");
+        System.out.println("│ LOYALTY POINTS (via LoyaltyEventListener)                   │");
+        System.out.println("└──────────────────────────────────────────────────────────────┘");
+        for (Map.Entry<String, Integer> entry : loyaltyBalances.entrySet()) {
+            System.out.println("  " + entry.getKey() + " → " + entry.getValue() + " pts");
         }
         System.out.println();
 
@@ -357,17 +371,6 @@ public class MovieBookingDemo {
         BookingRepository bookingRepo = facade.getBookingRepository();
         BookingFacade failFacade = new BookingFacade(showRepo, bookingRepo, freshLock, failingPayment);
 
-        // Add a listener to demonstrate the Observer pattern
-        List<String> events = new ArrayList<>();
-        failFacade.addListener(new BookingEventListener() {
-            public void onBookingConfirmed(Booking b) {
-                events.add("CONFIRMED: " + b.getBookingId());
-            }
-            public void onBookingCancelled(Booking b) {
-                events.add("CANCELLED: " + b.getBookingId());
-            }
-        });
-
         Show show = failFacade.searchShows(City.MUMBAI, "Inception", LocalDate.now()).get(0);
         String userId = "user-kelly";
 
@@ -398,10 +401,9 @@ public class MovieBookingDemo {
         boolean reLocked = failFacade.lockSeats(show.getId(), "user-leo", seats);
         System.out.println("  Another user locks same seats → " + (reLocked ? "SUCCESS" : "FAILED"));
 
-        // Listener events
-        System.out.println("  Events fired: " + (events.isEmpty() ? "none (expected — payment failed, no confirm/cancel)" : events));
-        System.out.println("  Observer pattern: BookingEventListener fires on confirm/cancel only.");
-        System.out.println("    Payment failure → exception thrown → no event (seats auto-released).");
+        // Listener check: main facade's listeners were not triggered (payment failed before confirm)
+        System.out.println("  Observer: listeners fire only on confirm/cancel. Payment failure → no event.");
+        System.out.println("    Seats are auto-released within confirmBooking on PaymentException.");
         System.out.println();
     }
 

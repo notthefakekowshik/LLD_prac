@@ -22,7 +22,7 @@ public class FNVHashFunction<T> implements HashFunction<T> {
             return 0;
         }
         
-        byte[] data = element.toString().getBytes();
+        byte[] data = element.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
         return fnv1a_32(data, seed);
     }
     

@@ -115,7 +115,7 @@ public class BloomFilter<T> {
      */
     private int getBitPosition(T element, int hashIndex) {
         int hash = hashFunction.hash(element, hashIndex);
-        return Math.abs(hash % bitArraySize);
+        return (hash & Integer.MAX_VALUE) % bitArraySize;
     }
     
     public int getExpectedElements() {
