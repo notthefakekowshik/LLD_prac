@@ -15,5 +15,8 @@
 # java
 - Java package declarations must match the file path exactly — use `com.lldprep.systems.<systemname>.*` (plural "systems") to match the directory structure under `com/lldprep/systems/`. Confidence: 0.85
 
+# communication-style
+- Never present inline code in conversation responses — it's not readable. Use file references, summaries, or write to files instead. Confidence: 0.85
+
 # system-design
 - When designing systems (HLD and LLD), always consider AI agents as first-class API consumers alongside humans. For existing implementations, add curveball scenarios testing agent traffic patterns (high-volume requests, programmatic retries, automated workflows, token-based rate limiting). This is a permanent design principle — humans and AI agents will coexist, and systems must be designed for that reality. Confidence: 0.85
