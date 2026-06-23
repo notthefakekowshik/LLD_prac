@@ -1,0 +1,134 @@
+classDiagram
+    class CustomThreadPool {
+        <<interface>>
+        +submit(Runnable task)
+        +submit(Callable~T~ task) CustomFuture~T~
+        +shutdown()
+        +shutdownNow() List~Runnable~
+        +isShutdown() boolean
+        +isTerminated() boolean
+        +awaitTermination(timeout, unit) boolean
+        +getActiveCount() int
+        +getCompletedTaskCount() long
+        +getMetrics() ThreadPoolMetrics
+    }
+
+    class FixedThreadPool {
+        -BlockingQueue~Runnable~ taskQueue
+        -List~WorkerThread~ workers
+        -AtomicReference~PoolState~ state
+        -RejectionPolicy rejectionPolicy
+        -ThreadFactory threadFactory
+        -int poolSize
+        -AtomicInteger activeCount
+        -AtomicLong completedTaskCount
+        -CountDownLatch terminationLatch
+        +submit(Runnable)
+        +submit(Callable~T~) CustomFuture~T~
+        +shutdown()
+        +shutdownNow() List~Runnable~
+        +getMetrics() ThreadPoolMetrics
+    }
+
+    class Builder {
+        -int poolSize
+        -int queueCapacity
+        -RejectionPolicy rejectionPolicy
+        -ThreadFactory threadFactory
+        +poolSize(int) Builder
+        +queueCapacity(int) Builder
+        +rejectionPolicy(RejectionPolicy) Builder
+        +threadFactory(ThreadFactory) Builder
+        +build() FixedThreadPool
+    }
+
+    class WorkerThread {
+        -FixedThreadPool pool
+        +run()
+    }
+
+    class PoolState {
+        <<enum>>
+        RUNNING
+        SHUTDOWN
+        TERMINATED
+    }
+
+    class RejectionPolicy {
+        <<interface>>
+        +reject(Runnable task, CustomThreadPool pool)
+    }
+
+    class AbortPolicy {
+        +reject(Runnable, CustomThreadPool)
+    }
+
+    class CallerRunsPolicy {
+        +reject(Runnable, CustomThreadPool)
+    }
+
+    class DiscardPolicy {
+        +reject(Runnable, CustomThreadPool)
+    }
+
+    class DiscardOldestPolicy {
+        +reject(Runnable, CustomThreadPool)
+    }
+
+    class ThreadFactory {
+        <<interface>>
+        +newThread(Runnable r) Thread
+    }
+
+    class DefaultThreadFactory {
+        -AtomicInteger threadNumber
+        +newThread(Runnable r) Thread
+    }
+
+    class CustomFuture~T~ {
+        <<interface>>
+        +get() T
+        +get(timeout, unit) T
+        +isDone() boolean
+        +isCancelled() boolean
+    }
+
+    class FutureTask~T~ {
+        -Callable~T~ callable
+        -CountDownLatch latch
+        -T result
+        -Throwable exception
+        +run()
+        +get() T
+        +isDone() boolean
+    }
+
+    class ThreadPoolMetrics {
+        +PoolState state
+        +int poolSize
+        +int activeCount
+        +long completedTaskCount
+        +int queueSize
+    }
+
+    class RejectedExecutionException {
+        +RejectedExecutionException(message)
+    }
+
+    CustomThreadPool <|.. FixedThreadPool : implements
+    FixedThreadPool *-- Builder : built by
+    FixedThreadPool *-- WorkerThread : owns
+    FixedThreadPool --> RejectionPolicy : uses
+    FixedThreadPool --> ThreadFactory : uses
+    FixedThreadPool --> ThreadPoolMetrics : returns
+    FixedThreadPool --> CustomFuture : returns
+
+    RejectionPolicy <|.. AbortPolicy : implements
+    RejectionPolicy <|.. CallerRunsPolicy : implements
+    RejectionPolicy <|.. DiscardPolicy : implements
+    RejectionPolicy <|.. DiscardOldestPolicy : implements
+
+    ThreadFactory <|.. DefaultThreadFactory : implements
+    CustomFuture~T~ <|.. FutureTask~T~ : implements
+
+    AbortPolicy ..> RejectedExecutionException : throws

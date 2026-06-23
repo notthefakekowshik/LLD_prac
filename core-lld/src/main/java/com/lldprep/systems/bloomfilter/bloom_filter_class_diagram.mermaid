@@ -1,0 +1,96 @@
+classDiagram
+    class BloomFilter~T~ {
+        -BitSet bitArray
+        -HashFunction~T~ hashFunction
+        -int bitArraySize
+        -int numHashFunctions
+        -int expectedElements
+        -double falsePositiveRate
+        -ReadWriteLock lock
+        +add(T element)
+        +mightContain(T element) boolean
+        +getBitArraySize() int
+        +getNumHashFunctions() int
+        +getExpectedElements() int
+        +getFalsePositiveRate() double
+        -getBitPosition(T element, int hashIndex) int
+    }
+
+    class Builder~T~ {
+        -int expectedElements
+        -double falsePositiveRate
+        -HashFunction~T~ hashFunction
+        +expectedElements(int) Builder
+        +falsePositiveRate(double) Builder
+        +hashFunction(HashFunction) Builder
+        +build() BloomFilter~T~
+        +calculateOptimalBitArraySize() int
+        +calculateOptimalHashCount() int
+    }
+
+    class HashFunction~T~ {
+        <<interface>>
+        +hash(T element, int seed) int
+    }
+
+    class MurmurHashFunction~T~ {
+        +hash(T element, int seed) int
+    }
+
+    class FNVHashFunction~T~ {
+        +hash(T element, int seed) int
+    }
+
+    class SimpleHashFunction~T~ {
+        +hash(T element, int seed) int
+    }
+
+    class CountingBloomFilter~T~ {
+        -int[] counters
+        -HashFunction~T~ hashFunction
+        +add(T element)
+        +mightContain(T element) boolean
+        +remove(T element)
+        +clear()
+    }
+
+    class CountingBuilder~T~ {
+        -int expectedElements
+        -double falsePositiveRate
+        -HashFunction~T~ hashFunction
+        +expectedElements(int) CountingBuilder
+        +falsePositiveRate(double) CountingBuilder
+        +hashFunction(HashFunction) CountingBuilder
+        +build() CountingBloomFilter~T~
+        +calculateOptimalArraySize() int
+        +calculateOptimalHashCount() int
+    }
+
+    class BloomFilterMetrics~T~ {
+        -BloomFilter~T~ filter
+        +getSaturation() double
+        +estimateActualFalsePositiveRate(int) double
+        +estimateElementCount(int) int
+        +isApproachingSaturation(double) boolean
+        +getHealthReport(int) String
+    }
+
+    class BloomFilterException {
+        +BloomFilterException(message)
+    }
+
+    HashFunction~T~ <|.. MurmurHashFunction~T~ : implements
+    HashFunction~T~ <|.. FNVHashFunction~T~ : implements
+    HashFunction~T~ <|.. SimpleHashFunction~T~ : implements
+
+    BloomFilter~T~ *-- Builder~T~ : contains (inner class)
+    Builder~T~ ..> BloomFilter~T~ : creates
+    Builder~T~ ..> BloomFilterException : throws
+    BloomFilter~T~ --> HashFunction~T~ : uses
+
+    CountingBloomFilter~T~ *-- CountingBuilder~T~ : contains (inner class)
+    CountingBuilder~T~ ..> CountingBloomFilter~T~ : creates
+    CountingBuilder~T~ ..> BloomFilterException : throws
+    CountingBloomFilter~T~ --> HashFunction~T~ : uses
+
+    BloomFilterMetrics~T~ --> BloomFilter~T~ : wraps

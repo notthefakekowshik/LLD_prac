@@ -16,6 +16,15 @@ package com.lldprep.systems.bloomfilter.hash;
  */
 public class SimpleHashFunction<T> implements HashFunction<T> {
     
+    /**
+     * Starts from element.hashCode() and adds Murmur-style final mixing.
+     *
+     * Why extra mixing is needed: many Java hashCode() implementations are good
+     * for HashMap buckets, but Bloom filters repeatedly derive positions for
+     * same element using different seeds. XORing seed changes starting bits;
+     * final avalanche spreads that change across whole int so positions are less
+     * correlated.
+     */
     @Override
     public int hash(T element, int seed) {
         if (element == null) {

@@ -64,6 +64,7 @@ com.lldprep.<problem>/
     repository/   → In-memory data storage (Maps, Sets, Lists)
     exception/    → Custom checked/unchecked exceptions
     factory/      → Factory classes (if applicable)
+    class_diagram.mermaid → Raw classDiagram block (no fences) extracted from DESIGN_DICE.md — renderable directly in Mermaid tooling
 
 com.lldprep.foundations/
     creational/   → All 5 creational patterns with good/bad examples ✅ COMPLETED

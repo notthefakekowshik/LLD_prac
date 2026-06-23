@@ -1,0 +1,74 @@
+classDiagram
+    class Cache~K,V~ {
+        -Storage~K,V~ storage
+        -EvictionPolicy~K~ evictionPolicy
+        -long ttlMillis
+        -ScheduledExecutorService cleanupService
+        +put(K key, V value)
+        +get(K key) V
+        +remove(K key)
+        +shutdown()
+        -evictExpiredEntries()
+        -isExpired(CacheEntry) boolean
+    }
+
+    class Storage~K,V~ {
+        <<interface>>
+        +add(K key, CacheEntry~V~ value)
+        +remove(K key)
+        +get(K key) CacheEntry~V~
+        +size() int
+        +getAllKeys() Set~K~
+    }
+
+    class HashMapStorage~K,V~ {
+        -Map~K, CacheEntry~V~~ store
+        -int capacity
+        +add(K key, CacheEntry~V~ value)
+        +remove(K key)
+        +get(K key) CacheEntry~V~
+    }
+
+    class EvictionPolicy~K~ {
+        <<interface>>
+        +keyAccessed(K key)
+        +evictKey() K
+        +removeKey(K key)
+    }
+
+    class LRUEvictionPolicy~K~ {
+        -LinkedHashMap~K,Boolean~ accessOrder
+        +keyAccessed(K key)
+        +evictKey() K
+        +removeKey(K key)
+    }
+
+    class LFUEvictionPolicy~K~ {
+        -Map~K,Integer~ frequencyMap
+        +keyAccessed(K key)
+        +evictKey() K
+        +removeKey(K key)
+    }
+
+    class CacheEntry~V~ {
+        -V value
+        -Instant createdAt
+        -Instant lastAccessed
+        +getValue() V
+        +getCreatedAt() Instant
+        +updateLastAccessed()
+    }
+
+    class CacheFullException {
+        +CacheFullException(message)
+    }
+
+    Storage~K,V~ <|.. HashMapStorage~K,V~ : implements
+    EvictionPolicy~K~ <|.. LRUEvictionPolicy~K~ : implements
+    EvictionPolicy~K~ <|.. LFUEvictionPolicy~K~ : implements
+
+    Cache~K,V~ --> Storage~K,V~ : uses
+    Cache~K,V~ --> EvictionPolicy~K~ : uses
+    Cache~K,V~ --> CacheEntry~V~ : creates
+    Storage~K,V~ *-- CacheEntry~V~ : stores
+    Storage~K,V~ ..> CacheFullException : throws

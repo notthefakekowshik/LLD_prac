@@ -1,0 +1,109 @@
+classDiagram
+    class Logger {
+        -String name
+        -volatile LogLevel level
+        -List~Handler~ handlers
+        +debug(String message)
+        +info(String message)
+        +warn(String message)
+        +error(String message)
+        +error(String message, Throwable t)
+        +fatal(String message)
+        +addHandler(Handler handler)
+        +setLevel(LogLevel level)
+        +getLevel() LogLevel
+        +getName() String
+        -log(LogLevel level, String message, Throwable t)
+    }
+
+    class LogLevel {
+        <<enum>>
+        DEBUG
+        INFO
+        WARN
+        ERROR
+        FATAL
+        +isAtLeast(LogLevel other) boolean
+    }
+
+    class LogRecord {
+        -Instant timestamp
+        -LogLevel level
+        -String loggerName
+        -String message
+        -Throwable throwable
+        +getTimestamp() Instant
+        +getLevel() LogLevel
+        +getLoggerName() String
+        +getMessage() String
+        +getThrowable() Throwable
+    }
+
+    class Handler {
+        <<interface>>
+        +handle(LogRecord record)
+        +setNext(Handler next) Handler
+        +setLevel(LogLevel level)
+    }
+
+    class AbstractHandler {
+        <<abstract>>
+        -Handler next
+        -LogLevel level
+        -Formatter formatter
+        +handle(LogRecord record)
+        #write(String formatted, LogRecord record)
+        +setNext(Handler next) Handler
+        +setLevel(LogLevel level)
+        +setFormatter(Formatter formatter)
+    }
+
+    class ConsoleHandler {
+        +ConsoleHandler(LogLevel, Formatter)
+        #write(String formatted, LogRecord record)
+    }
+
+    class FileHandler {
+        -String filePath
+        -FileWriter writer
+        +FileHandler(LogLevel, Formatter, String filePath)
+        #write(String formatted, LogRecord record)
+    }
+
+    class Formatter {
+        <<interface>>
+        +format(LogRecord record) String
+    }
+
+    class PlainTextFormatter {
+        +format(LogRecord record) String
+    }
+
+    class JsonFormatter {
+        +format(LogRecord record) String
+    }
+
+    class LoggerFactory {
+        -ConcurrentHashMap~String,Logger~ cache
+        +getLogger(String name) Logger
+        +getLogger(String name, LogLevel level) Logger
+        +getLogger(Class clazz) Logger
+        +getCachedLoggerCount() int
+        +clearCache()
+    }
+
+    class LoggerException {
+        +LoggerException(message)
+    }
+
+    Handler <|.. AbstractHandler : implements
+    AbstractHandler <|-- ConsoleHandler : extends
+    AbstractHandler <|-- FileHandler : extends
+    Formatter <|.. PlainTextFormatter : implements
+    Formatter <|.. JsonFormatter : implements
+
+    Logger --> Handler : dispatches to
+    Logger --> LogRecord : creates
+    AbstractHandler --> Formatter : uses
+    AbstractHandler --> Handler : chains to next
+    LoggerFactory --> Logger : creates and caches

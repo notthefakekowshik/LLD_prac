@@ -1,0 +1,168 @@
+classDiagram
+    class ParkingLotService {
+        <<interface>>
+        +checkIn(vehicle) Ticket
+        +checkOut(ticketId) double
+        +getAvailableSpots(vehicleType) long
+        +getMetrics() ParkingLotMetrics
+    }
+
+    class ParkingLotServiceImpl {
+        -ParkingLot parkingLot
+        -SpotAllocationStrategy allocationStrategy
+        -FeeCalculationStrategy feeStrategy
+        -TicketRepository ticketRepository
+        -ReentrantLock checkInLock
+        -AtomicLong totalRevenueCents
+        -AtomicLong checkoutsProcessed
+        +checkIn(vehicle) Ticket
+        +checkOut(ticketId) double
+        +getAvailableSpots(vehicleType) long
+        +getMetrics() ParkingLotMetrics
+    }
+
+    class SpotAllocationStrategy {
+        <<interface>>
+        +allocate(vehicle, levels) Optional~ParkingSpot~
+    }
+
+    class NearestSpotStrategy {
+        +allocate(vehicle, levels) Optional~ParkingSpot~
+    }
+
+    class FeeCalculationStrategy {
+        <<interface>>
+        +calculateFee(ticket, exitTime) double
+    }
+
+    class HourlyFeeStrategy {
+        -BIKE_RATE double
+        -CAR_RATE double
+        -TRUCK_RATE double
+        -MIN_FEE double
+        +calculateFee(ticket, exitTime) double
+    }
+
+    class TicketRepository {
+        <<interface>>
+        +save(ticket)
+        +findById(id) Optional~Ticket~
+        +removeAndGet(id) Optional~Ticket~
+        +count() long
+        +totalIssued() long
+    }
+
+    class InMemoryTicketRepository {
+        -ConcurrentHashMap store
+        -AtomicLong issuedCount
+    }
+
+    class ParkingLot {
+        -String name
+        -String address
+        -List~ParkingLevel~ levels
+        +getTotalSpots() long
+        +getAvailableSpots() long
+        +getOccupiedSpots() long
+    }
+
+    class ParkingLevel {
+        -int levelNumber
+        -List~ParkingSpot~ spots
+        +availableCount() long
+    }
+
+    class ParkingSpot {
+        -String spotId
+        -int levelNumber
+        -int spotNumber
+        -SpotType spotType
+        -SpotStatus status
+        -Vehicle parkedVehicle
+        +park(vehicle) boolean
+        +vacate()
+        +isAvailable() boolean
+    }
+
+    class Vehicle {
+        <<abstract>>
+        -String vehicleId
+        -String licensePlate
+        -VehicleType vehicleType
+    }
+
+    class Bike
+    class Car
+    class Truck
+
+    class Ticket {
+        -String ticketId
+        -Vehicle vehicle
+        -ParkingSpot spot
+        -LocalDateTime entryTime
+        -LocalDateTime exitTime
+        -double fee
+        +checkout(exitTime, fee)
+        +isCheckedOut() boolean
+    }
+
+    class ParkingLotMetrics {
+        <<record>>
+        +long totalSpots
+        +long availableSpots
+        +long occupiedSpots
+        +long ticketsIssued
+        +long checkoutsProcessed
+        +double totalRevenue
+        +occupancyRate() double
+    }
+
+    class VehicleFactory {
+        +create(type, licensePlate) Vehicle
+    }
+
+    class VehicleType {
+        <<enum>>
+        BIKE
+        CAR
+        TRUCK
+    }
+
+    class SpotType {
+        <<enum>>
+        COMPACT
+        REGULAR
+        LARGE
+        +canFit(vehicleType) boolean
+        +preferredFor(vehicleType) SpotType
+    }
+
+    class SpotStatus {
+        <<enum>>
+        AVAILABLE
+        OCCUPIED
+        OUT_OF_SERVICE
+    }
+
+    ParkingLotService <|.. ParkingLotServiceImpl : implements
+    SpotAllocationStrategy <|.. NearestSpotStrategy : implements
+    FeeCalculationStrategy <|.. HourlyFeeStrategy : implements
+    TicketRepository <|.. InMemoryTicketRepository : implements
+
+    ParkingLotServiceImpl --> ParkingLotService : implements
+    ParkingLotServiceImpl *-- ParkingLot : owns
+    ParkingLotServiceImpl *-- SpotAllocationStrategy : owns (DIP)
+    ParkingLotServiceImpl *-- FeeCalculationStrategy : owns (DIP)
+    ParkingLotServiceImpl *-- TicketRepository : owns (DIP)
+
+    ParkingLot *-- ParkingLevel : composition
+    ParkingLevel *-- ParkingSpot : composition
+    Ticket --> ParkingSpot : association
+    Ticket --> Vehicle : association
+    ParkingSpot --> Vehicle : association (nullable)
+
+    Vehicle <|-- Bike : extends
+    Vehicle <|-- Car : extends
+    Vehicle <|-- Truck : extends
+
+    VehicleFactory ..> Vehicle : creates

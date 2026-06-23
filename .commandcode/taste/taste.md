@@ -3,6 +3,9 @@
 [cmd]: https://commandcode.ai/
 
 # documentation
+- Always extract the `classDiagram` block from `DESIGN_DICE.md` into a standalone `class_diagram.mermaid` file in the same package directory — no markdown fences, raw Mermaid syntax only. Do this every time a class diagram is created or updated. Confidence: 0.90
+
+
 - Do not universally mandate SCHEMA.md or API.md for all systems — apply discretion and only create these docs for systems where they make sense (e.g., systems with relational data for schema, systems with external-facing interfaces for API contracts). Confidence: 0.70
 - Always follow great quality when populating MD file notes — produce high-quality markdown documentation with thorough detail. Confidence: 0.85
 

@@ -1,0 +1,101 @@
+classDiagram
+    class RateLimiter {
+        <<interface>>
+        +tryAcquire() boolean
+        +tryAcquire(int permits) boolean
+        +getAvailablePermits() long
+        +reset()
+        +getConfig() RateLimitConfig
+        +getAlgorithmType() AlgorithmType
+    }
+
+    class RateLimitConfig {
+        -long maxRequests
+        -Duration windowSize
+        -int burstSize
+        +getMaxRequests() long
+        +getWindowSize() Duration
+        +getBurstSize() int
+        +getRefillRatePerNano() double
+        +getLeakRatePerNano() double
+        +builder() Builder
+    }
+
+    class AlgorithmType {
+        <<enum>>
+        TOKEN_BUCKET
+        LEAKY_BUCKET
+        FIXED_WINDOW
+        SLIDING_WINDOW_LOG
+        SLIDING_WINDOW_COUNTER
+    }
+
+    class TokenBucketRateLimiter {
+        -double tokens
+        -long lastRefillTime
+        -ReentrantLock lock
+        +tryAcquire() boolean
+    }
+
+    class LeakyBucketRateLimiter {
+        -double currentLevel
+        -long lastLeakTime
+        -ReentrantLock lock
+        +tryAcquire() boolean
+    }
+
+    class FixedWindowRateLimiter {
+        -AtomicLong requestCount
+        -long windowStart
+        +tryAcquire() boolean
+    }
+
+    class SlidingWindowLogRateLimiter {
+        -TreeSet~Long~ requestLog
+        -ReentrantLock lock
+        +tryAcquire() boolean
+    }
+
+    class SlidingWindowCounterRateLimiter {
+        -AtomicLong currentCount
+        -AtomicLong previousCount
+        -long windowStart
+        +tryAcquire() boolean
+    }
+
+    class RateLimiterFactory {
+        +create(AlgorithmType, RateLimitConfig) RateLimiter
+        +createTokenBucket(config) RateLimiter
+        +createLeakyBucket(config) RateLimiter
+        +createFixedWindow(config) RateLimiter
+        +createSlidingWindowLog(config) RateLimiter
+        +createSlidingWindowCounter(config) RateLimiter
+    }
+
+    class UserRateLimiterRegistry {
+        -ConcurrentHashMap~String,RateLimiter~ limiters
+        -AlgorithmType defaultAlgorithm
+        -RateLimitConfig defaultConfig
+        +getLimiter(userId) RateLimiter
+        +getLimiter(userId, algorithm, config) RateLimiter
+        +removeLimiter(userId) boolean
+        +resetLimiter(userId) boolean
+        +clear()
+    }
+
+    class RateLimitExceededException {
+        +RateLimitExceededException(message)
+    }
+
+    RateLimiter <|.. TokenBucketRateLimiter : implements
+    RateLimiter <|.. LeakyBucketRateLimiter : implements
+    RateLimiter <|.. FixedWindowRateLimiter : implements
+    RateLimiter <|.. SlidingWindowLogRateLimiter : implements
+    RateLimiter <|.. SlidingWindowCounterRateLimiter : implements
+
+    RateLimiterFactory --> RateLimiter : creates
+    RateLimiterFactory --> AlgorithmType : reads
+    RateLimiterFactory --> RateLimitConfig : reads
+
+    UserRateLimiterRegistry --> RateLimiterFactory : uses
+    UserRateLimiterRegistry --> RateLimiter : holds per user

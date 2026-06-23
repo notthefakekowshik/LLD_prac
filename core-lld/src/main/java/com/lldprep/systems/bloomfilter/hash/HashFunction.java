@@ -13,6 +13,11 @@ public interface HashFunction<T> {
     
     /**
      * Generates a hash value for the given element with a seed.
+     *
+     * Bloom filters need k hash positions for the same element. Instead of
+     * creating k different hash classes, caller passes different seed values to
+     * the same hash algorithm. Good implementations should make seed changes
+     * produce unrelated-looking outputs.
      * 
      * Contract:
      * - Must be deterministic: same element + seed = same hash

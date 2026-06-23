@@ -115,6 +115,8 @@ classDiagram
         +mightContain(T element) boolean
         +getBitArraySize() int
         +getNumHashFunctions() int
+        +getExpectedElements() int
+        +getFalsePositiveRate() double
         -getBitPosition(T element, int hashIndex) int
     }
 
@@ -149,16 +151,32 @@ classDiagram
 
     class CountingBloomFilter~T~ {
         -int[] counters
+        -HashFunction~T~ hashFunction
         +add(T element)
         +mightContain(T element) boolean
         +remove(T element)
+        +clear()
+    }
+
+    class CountingBuilder~T~ {
+        -int expectedElements
+        -double falsePositiveRate
+        -HashFunction~T~ hashFunction
+        +expectedElements(int) CountingBuilder
+        +falsePositiveRate(double) CountingBuilder
+        +hashFunction(HashFunction) CountingBuilder
+        +build() CountingBloomFilter~T~
+        +calculateOptimalArraySize() int
+        +calculateOptimalHashCount() int
     }
 
     class BloomFilterMetrics~T~ {
         -BloomFilter~T~ filter
-        +getBitsSet() int
-        +getEstimatedFalsePositiveRate() double
-        +getEstimatedElementCount() int
+        +getSaturation() double
+        +estimateActualFalsePositiveRate(int) double
+        +estimateElementCount(int) int
+        +isApproachingSaturation(double) boolean
+        +getHealthReport(int) String
     }
 
     class BloomFilterException {
@@ -169,10 +187,17 @@ classDiagram
     HashFunction~T~ <|.. FNVHashFunction~T~ : implements
     HashFunction~T~ <|.. SimpleHashFunction~T~ : implements
 
-    BloomFilter~T~ *-- Builder~T~ : built by
-    BloomFilter~T~ --> HashFunction~T~ : uses
-    BloomFilterMetrics~T~ --> BloomFilter~T~ : wraps
+    BloomFilter~T~ *-- Builder~T~ : contains (inner class)
+    Builder~T~ ..> BloomFilter~T~ : creates
     Builder~T~ ..> BloomFilterException : throws
+    BloomFilter~T~ --> HashFunction~T~ : uses
+
+    CountingBloomFilter~T~ *-- CountingBuilder~T~ : contains (inner class)
+    CountingBuilder~T~ ..> CountingBloomFilter~T~ : creates
+    CountingBuilder~T~ ..> BloomFilterException : throws
+    CountingBloomFilter~T~ --> HashFunction~T~ : uses
+
+    BloomFilterMetrics~T~ --> BloomFilter~T~ : wraps
 ```
 
 ---

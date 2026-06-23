@@ -1,0 +1,140 @@
+classDiagram
+    class TaskScheduler {
+        <<interface>>
+        +scheduleOnce(name, task, delay, unit) ScheduledTask
+        +scheduleAt(name, task, dateTime) ScheduledTask
+        +scheduleAt(name, task, time) ScheduledTask
+        +scheduleAtFixedRate(name, task, initialDelay, period, unit) ScheduledTask
+        +scheduleWithFixedDelay(name, task, initialDelay, delay, unit) ScheduledTask
+        +scheduleRecurring(name, task, interval) ScheduledTask
+        +submit(name, task) ScheduledTask
+        +cancel(taskId) boolean
+        +cancelAll()
+        +getScheduledTaskCount() int
+        +shutdown(timeout, unit) boolean
+        +getMetrics() SchedulerMetrics
+    }
+
+    class Task {
+        <<interface>>
+        +getId() String
+        +getName() String
+        +execute()
+        +getNextExecutionTime() long
+        +isRecurring() boolean
+        +getIntervalMillis() long
+        +getExecutionCount() long
+        +getMaxExecutions() long
+        +onExecuted() boolean
+        +cancel()
+        +isCancelled() boolean
+        +compareTo(Task) int
+    }
+
+    class ScheduledTask {
+        <<interface>>
+        +getId() String
+        +getName() String
+        +cancel() boolean
+        +isCancelled() boolean
+        +isDone() boolean
+        +isRunning() boolean
+        +isRecurring() boolean
+        +getExecutionCount() long
+        +getScheduledTime() LocalDateTime
+        +getDelay(unit) long
+        +getLastExecutionTime() LocalDateTime
+        +getNextExecutionTime() LocalDateTime
+    }
+
+    class DefaultTask {
+        -String id
+        -String name
+        -Runnable action
+        -long intervalMillis
+        -long maxExecutions
+        -AtomicLong nextExecutionTime
+        -AtomicLong executionCount
+        -AtomicBoolean cancelled
+        -AtomicBoolean running
+        -volatile long lastExecutionTime
+        +execute()
+        +onExecuted() boolean
+        +cancel()
+        +getDelay(unit) long
+    }
+
+    class DefaultScheduledTask {
+        -Task task
+        +cancel() boolean
+        +isDone() boolean
+        +isRunning() boolean
+        +getScheduledTime() LocalDateTime
+        -getTask() Task
+    }
+
+    class DelayQueueScheduler {
+        -DelayQueue~DelayedTask~ taskQueue
+        -ConcurrentHashMap~String,Task~ taskRegistry
+        -ExecutorService workerPool
+        -Thread dispatcherThread
+        -ReentrantLock schedulerLock
+        -AtomicBoolean shutdown
+        -AtomicLong tasksSubmitted
+        -AtomicLong tasksExecuted
+        -AtomicLong tasksCancelled
+        -dispatchLoop()
+        -executeTask(task)
+        -scheduleInternal(name, action, initialDelay, interval, maxExecutions) ScheduledTask
+    }
+
+    class DelayedTask {
+        <<inner class of DelayQueueScheduler>>
+        -Task task
+        +getDelay(unit) long
+        +compareTo(Delayed) int
+    }
+
+    class TaskBuilder {
+        -TaskScheduler scheduler
+        -String name
+        -Runnable action
+        +runEvery(interval, unit) TaskBuilder
+        +startingIn(delay, unit) TaskBuilder
+        +maxTimes(count) TaskBuilder
+        +runOnce() TaskBuilder
+        +withDelay(delay, unit) TaskBuilder
+        +schedule() ScheduledTask
+        +scheduleAt(time) ScheduledTask
+    }
+
+    class SchedulerMetrics {
+        <<record>>
+        +long tasksSubmitted
+        +long tasksExecuted
+        +long tasksCancelled
+        +int pendingTasks
+        +int workerPoolSize
+        +tasksInFlight() long
+        +successRate() double
+    }
+
+    class TaskSchedulerException {
+        +TaskSchedulerException(message)
+    }
+
+    TaskScheduler <|.. DelayQueueScheduler : implements
+    Task <|.. DefaultTask : implements
+    ScheduledTask <|.. DefaultScheduledTask : implements
+
+    DefaultScheduledTask *-- Task : wraps (Adapter)
+    DelayedTask *-- Task : wraps (Adapter)
+
+    DelayQueueScheduler --> TaskScheduler : implements
+    DelayQueueScheduler *-- DelayedTask : owns (inner class)
+    DelayQueueScheduler --> DefaultTask : creates
+    DelayQueueScheduler --> DefaultScheduledTask : creates
+    DelayQueueScheduler --> SchedulerMetrics : returns
+    DelayQueueScheduler ..> TaskSchedulerException : throws
+
+    TaskBuilder --> TaskScheduler : uses

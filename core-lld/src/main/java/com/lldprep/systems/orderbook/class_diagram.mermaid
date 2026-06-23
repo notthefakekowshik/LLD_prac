@@ -1,0 +1,70 @@
+classDiagram
+    class OrderBookEngine {
+        -TradeListener listener
+        -ConcurrentHashMap~String,ExecutorService~ executors
+        -ConcurrentHashMap~String,OrderBook~ books
+        +placeOrder(Order) Future~Void~
+        +cancelOrder(String symbol, String orderId) Future~Void~
+        +shutdown()
+        -executorFor(symbol) ExecutorService
+        -bookFor(symbol) OrderBook
+    }
+
+    class OrderBook {
+        -String symbol
+        -TradeListener listener
+        -NavigableMap~Double,Deque~Order~~ bids
+        -NavigableMap~Double,Deque~Order~~ asks
+        -Map~String,Order~ allOrders
+        +placeOrder(Order)
+        +cancelOrder(String orderId)
+        -matchLimit(Order)
+        -matchMarket(Order)
+        -matchBuyAgainstAsks(Order)
+        -matchSellAgainstBids(Order)
+        -addToBook(side, price, order)
+        -removeFromBook(order)
+    }
+
+    class Order {
+        -String id
+        -String symbol
+        -Side side
+        -Type type
+        -double price
+        -int remainingQty
+        -Status status
+        -Instant placedAt
+        -long sequence
+        +fill(int qty)
+        +cancel()
+    }
+
+    class MatchResult {
+        -String symbol
+        -String buyOrderId
+        -String sellOrderId
+        -double price
+        -int quantity
+    }
+
+    class TradeListener {
+        <<interface>>
+        +onTrade(MatchResult result)
+        +onOrderAccepted(Order order)
+        +onOrderCancelled(Order order)
+    }
+
+    class OrderNotFoundException {
+        +OrderNotFoundException(orderId)
+    }
+
+    OrderBookEngine --> OrderBook : creates and routes to
+    OrderBookEngine --> TradeListener : injects into OrderBook
+    OrderBook --> TradeListener : notifies
+    OrderBook --> Order : matches and fills
+    OrderBook --> MatchResult : creates
+    OrderBook ..> OrderNotFoundException : throws
+    Order +-- "Side" : inner enum
+    Order +-- "Type" : inner enum
+    Order +-- "Status" : inner enum

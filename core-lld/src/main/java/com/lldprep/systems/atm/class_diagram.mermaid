@@ -1,0 +1,225 @@
+classDiagram
+    class ATM {
+        -String atmId
+        -ATMState currentState
+        -CashInventory cashInventory
+        -CardManager cardManager
+        -AccountManager accountManager
+        -TransactionLogger transactionLogger
+        -ReceiptPrinter receiptPrinter
+        -CashDispenser dispenserChain
+        -Card currentCard
+        -Account currentAccount
+        -int failedPinAttempts
+        +insertCard(String cardNumber)
+        +enterPIN(String pin)
+        +selectAccount(AccountType)
+        +checkBalance()
+        +withdrawCash(BigDecimal amount)
+        +depositCash(BigDecimal amount, Map~Denomination,Integer~)
+        +changePIN(String oldPIN, String newPIN)
+        +cancelTransaction()
+        +ejectCard()
+        +setState(ATMState)
+        +getCashInventory() CashInventory
+    }
+
+    class ATMState {
+        <<interface>>
+        +insertCard(ATM, String cardNumber)
+        +enterPIN(ATM, String pin)
+        +selectAccount(ATM, AccountType)
+        +performTransaction(ATM, TransactionType, BigDecimal)
+        +cancel(ATM)
+    }
+
+    class IdleState {
+        +insertCard(ATM, String)
+        +enterPIN(ATM, String) throws IllegalStateException
+        +selectAccount(ATM, AccountType) throws IllegalStateException
+        +performTransaction(ATM, TransactionType, BigDecimal) throws IllegalStateException
+        +cancel(ATM)
+    }
+
+    class CardInsertedState {
+        -int pinAttempts
+        +insertCard(ATM, String) throws IllegalStateException
+        +enterPIN(ATM, String)
+        +selectAccount(ATM, AccountType) throws IllegalStateException
+        +performTransaction(ATM, TransactionType, BigDecimal) throws IllegalStateException
+        +cancel(ATM)
+    }
+
+    class PINEnteredState {
+        +insertCard(ATM, String) throws IllegalStateException
+        +enterPIN(ATM, String) throws IllegalStateException
+        +selectAccount(ATM, AccountType)
+        +performTransaction(ATM, TransactionType, BigDecimal) throws IllegalStateException
+        +cancel(ATM)
+    }
+
+    class TransactionMenuState {
+        +insertCard(ATM, String) throws IllegalStateException
+        +enterPIN(ATM, String) throws IllegalStateException
+        +selectAccount(ATM, AccountType) throws IllegalStateException
+        +performTransaction(ATM, TransactionType, BigDecimal)
+        +cancel(ATM)
+    }
+
+    class DispensingState {
+        +insertCard(ATM, String) throws IllegalStateException
+        +enterPIN(ATM, String) throws IllegalStateException
+        +selectAccount(ATM, AccountType) throws IllegalStateException
+        +performTransaction(ATM, TransactionType, BigDecimal) throws IllegalStateException
+        +cancel(ATM)
+    }
+
+    class CashDispenser {
+        <<abstract>>
+        -Denomination denomination
+        -CashDispenser nextDispenser
+        +dispense(BigDecimal amount, CashInventory) Map~Denomination,Integer~
+        +canHandle(BigDecimal) boolean
+        +setNext(CashDispenser)
+        #dispenseDenomination(BigDecimal, int noteValue, CashInventory) Map~Denomination,Integer~
+    }
+
+    class Dispenser2000 {
+        +Dispenser2000()
+    }
+
+    class Dispenser500 {
+        +Dispenser500()
+    }
+
+    class Dispenser200 {
+        +Dispenser200()
+    }
+
+    class Dispenser100 {
+        +Dispenser100()
+    }
+
+    class Card {
+        -String cardNumber
+        -String pinHash
+        -boolean blocked
+        -List~String~ accountIds
+        -LocalDate expiryDate
+        +validatePIN(String) boolean
+        +block()
+        +isBlocked() boolean
+        +isExpired() boolean
+    }
+
+    class Account {
+        -String accountId
+        -AccountType type
+        -BigDecimal balance
+        -String cardNumber
+        +debit(BigDecimal)
+        +credit(BigDecimal)
+        +getBalance() BigDecimal
+    }
+
+    class Transaction {
+        -String transactionId
+        -TransactionType type
+        -BigDecimal amount
+        -String accountId
+        -LocalDateTime timestamp
+        -TransactionStatus status
+    }
+
+    class CashInventory {
+        -Map~Denomination,Integer~ notes
+        +hasSufficientCash(BigDecimal) boolean
+        +dispense(Map~Denomination,Integer~)
+        +addCash(Map~Denomination,Integer~)
+        +getTotalCash() BigDecimal
+        +getAvailableNotes(Denomination) int
+    }
+
+    class Denomination {
+        <<enumeration>>
+        NOTE_100
+        NOTE_200
+        NOTE_500
+        NOTE_2000
+        -int value
+        +getValue() int
+    }
+
+    class TransactionType {
+        <<enumeration>>
+        BALANCE_INQUIRY
+        CASH_WITHDRAWAL
+        CASH_DEPOSIT
+        PIN_CHANGE
+    }
+
+    class AccountType {
+        <<enumeration>>
+        CHECKING
+        SAVINGS
+    }
+
+    class CardManager {
+        -Map~String,Card~ cards
+        +validateCard(String) Card
+        +verifyPIN(Card, String) boolean
+        +blockCard(String)
+    }
+
+    class AccountManager {
+        -Map~String,Account~ accounts
+        +getAccount(String) Account
+        +updateBalance(String, BigDecimal)
+    }
+
+    class TransactionLogger {
+        -List~Transaction~ transactions
+        +log(Transaction)
+        +getTransactionHistory(String accountId) List~Transaction~
+    }
+
+    class ReceiptPrinter {
+        <<interface>>
+        +printReceipt(Transaction, BigDecimal balance) String
+    }
+
+    class TextReceiptPrinter {
+        +printReceipt(Transaction, BigDecimal balance) String
+    }
+
+    ATMState <|.. IdleState : implements
+    ATMState <|.. CardInsertedState : implements
+    ATMState <|.. PINEnteredState : implements
+    ATMState <|.. TransactionMenuState : implements
+    ATMState <|.. DispensingState : implements
+
+    ATM --> ATMState : has current
+    ATM --> CashDispenser : uses
+    ATM --> CardManager : uses
+    ATM --> AccountManager : uses
+    ATM --> TransactionLogger : uses
+    ATM --> ReceiptPrinter : uses
+    ATM --> CashInventory : has
+
+    CashDispenser <|-- Dispenser2000
+    CashDispenser <|-- Dispenser500
+    CashDispenser <|-- Dispenser200
+    CashDispenser <|-- Dispenser100
+
+    CashDispenser o-- CashDispenser : next
+    CashDispenser ..> CashInventory : uses
+    CashDispenser ..> Denomination : uses
+
+    CardManager ..> Card : manages
+    AccountManager ..> Account : manages
+    ATM ..> Card : current
+    ATM ..> Account : current
+
+    ReceiptPrinter <|.. TextReceiptPrinter : implements
+
+    TransactionLogger ..> Transaction : logs

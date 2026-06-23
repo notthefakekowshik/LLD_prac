@@ -1,0 +1,143 @@
+classDiagram
+    class SymbolType {
+        <<enumeration>>
+        CLASS
+        METHOD
+        FIELD
+        FILE
+        VARIABLE
+    }
+
+    class MatchType {
+        <<enumeration>>
+        EXACT
+        CAMEL_CASE
+        SUBSEQUENCE
+    }
+
+    class Symbol {
+        -String name
+        -String fullyQualifiedName
+        -SymbolType type
+        -String filePath
+        -Instant lastAccessedAt
+        +String getName()
+        +SymbolType getType()
+        +Instant getLastAccessedAt()
+        +void touchAccessTime()
+    }
+
+    class SearchQuery {
+        -String rawQuery
+        -int maxResults
+        -Set~SymbolType~ typeFilter
+        +String getRawQuery()
+        +int getMaxResults()
+        +Set~SymbolType~ getTypeFilter()
+        +builder()$ Builder
+    }
+
+    class SearchResult {
+        -Symbol symbol
+        -double score
+        -MatchType matchType
+        +Symbol getSymbol()
+        +double getScore()
+        +MatchType getMatchType()
+    }
+
+    class MatchStrategy {
+        <<interface>>
+        +boolean matches(String query, String symbolName)
+        +int baseScore()
+        +MatchType type()
+    }
+
+    class ExactSubstringStrategy {
+        +boolean matches(String query, String symbolName)
+        +int baseScore()
+        +MatchType type()
+    }
+
+    class CamelCaseStrategy {
+        +boolean matches(String query, String symbolName)
+        +int baseScore()
+        +MatchType type()
+        -List~String~ tokenize(String symbolName)
+    }
+
+    class SubsequenceStrategy {
+        +boolean matches(String query, String symbolName)
+        +int baseScore()
+        +MatchType type()
+    }
+
+    class RankingStrategy {
+        <<interface>>
+        +double score(Symbol symbol, String query, MatchType matchType)
+    }
+
+    class DefaultRankingStrategy {
+        +double score(Symbol symbol, String query, MatchType matchType)
+        -double prefixBonus(String query, String symbolName)
+        -double typeBonus(SymbolType type)
+        -double recencyBonus(Instant lastAccessedAt)
+    }
+
+    class SymbolIndex {
+        <<interface>>
+        +void add(Symbol symbol)
+        +void remove(Symbol symbol)
+        +Set~Symbol~ getCandidates(String query)
+    }
+
+    class TrigramInvertedIndex {
+        -Map~String, Set~Symbol~~ index
+        -Map~Symbol, Set~String~~ symbolTrigrams
+        +void add(Symbol symbol)
+        +void remove(Symbol symbol)
+        +Set~Symbol~ getCandidates(String query)
+        -Set~String~ extractTrigrams(String text)
+    }
+
+    class SymbolIndexer {
+        -SymbolIndex index
+        +void indexAll(List~Symbol~ symbols)
+        +void index(Symbol symbol)
+    }
+
+    class SymbolSearchEngine {
+        -SymbolIndex index
+        -List~MatchStrategy~ strategies
+        -RankingStrategy ranker
+        +List~SearchResult~ search(SearchQuery query)
+        -Optional~SearchResult~ bestMatch(Symbol symbol, String query)
+    }
+
+    class SearchResultCache {
+        -SymbolSearchEngine engine
+        -Cache~String, List~SearchResult~~ cache
+        +List~SearchResult~ search(SearchQuery query)
+        -String cacheKey(SearchQuery query)
+    }
+
+    class SymbolNotFoundException {
+        +SymbolNotFoundException(String symbolName)
+    }
+
+    MatchStrategy <|.. ExactSubstringStrategy : implements
+    MatchStrategy <|.. CamelCaseStrategy : implements
+    MatchStrategy <|.. SubsequenceStrategy : implements
+    RankingStrategy <|.. DefaultRankingStrategy : implements
+    SymbolIndex <|.. TrigramInvertedIndex : implements
+
+    Symbol --> SymbolType : has
+    SearchResult *-- Symbol : owns
+    SearchResult --> MatchType : has
+
+    SymbolSearchEngine --> SymbolIndex : uses
+    SymbolSearchEngine --> MatchStrategy : uses (list)
+    SymbolSearchEngine --> RankingStrategy : uses
+    SearchResultCache --> SymbolSearchEngine : decorates
+    SymbolIndexer --> SymbolIndex : populates
+    TrigramInvertedIndex ..> SymbolNotFoundException : throws

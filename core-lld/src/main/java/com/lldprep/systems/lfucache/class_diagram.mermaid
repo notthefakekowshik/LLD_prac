@@ -1,0 +1,85 @@
+classDiagram
+    class LFUCache~K,V~ {
+        -int capacity
+        -Map~K, CacheEntry~V~~ store
+        -EvictionPolicy~K~ evictionPolicy
+        -WriteBehindBuffer~K,V~ writeBehindBuffer
+        -ScheduledExecutorService ttlSweep
+        +put(K key, V value, long ttlMillis) void
+        +get(K key) V
+        +remove(K key) void
+        +size() int
+        +shutdown() void
+        -evict(K key) void
+        -evictExpiredEntries() void
+    }
+
+    class CacheEntry~V~ {
+        -V value
+        -long expiresAt
+        +isExpired() boolean
+        +getValue() V
+        +setValue(V) void
+    }
+
+    class EvictionPolicy~K~ {
+        <<interface>>
+        +keyAccessed(K key) void
+        +evictKey() K
+        +removeKey(K key) void
+    }
+
+    class O1LFUEvictionPolicy~K~ {
+        -Map~K,Integer~ keyFreq
+        -Map~Integer, LinkedHashSet~K~~ freqBuckets
+        -int minFreq
+        +keyAccessed(K key) void
+        +evictKey() K
+        +removeKey(K key) void
+    }
+
+    class BackingStore~K,V~ {
+        <<interface>>
+        +write(K key, V value) void
+        +read(K key) V
+    }
+
+    class InMemoryBackingStore~K,V~ {
+        -Map~K,V~ store
+        -AtomicInteger writeCount
+        +write(K key, V value) void
+        +read(K key) V
+        +getWriteCount() int
+    }
+
+    class WriteBehindBuffer~K,V~ {
+        -BlockingQueue~WriteBehindTask~K,V~~ queue
+        -BackingStore~K,V~ backingStore
+        -int batchSize
+        -Thread flusherThread
+        +enqueue(K key, V value) void
+        +shutdown() void
+        -flushLoop() void
+    }
+
+    class WriteBehindTask~K,V~ {
+        <<record>>
+        +K key
+        +V value
+        +long enqueuedAt
+    }
+
+    class CacheException {
+        +CacheException(String message)
+    }
+
+    EvictionPolicy~K~ <|.. O1LFUEvictionPolicy~K~ : implements
+    BackingStore~K,V~ <|.. InMemoryBackingStore~K,V~ : implements
+
+    LFUCache~K,V~ --> EvictionPolicy~K~ : uses (Strategy)
+    LFUCache~K,V~ --> WriteBehindBuffer~K,V~ : uses
+    LFUCache~K,V~ *-- CacheEntry~V~ : stores (Composition)
+    LFUCache~K,V~ ..> CacheException : throws
+
+    WriteBehindBuffer~K,V~ --> BackingStore~K,V~ : flushes to (DIP)
+    WriteBehindBuffer~K,V~ *-- WriteBehindTask~K,V~ : queues

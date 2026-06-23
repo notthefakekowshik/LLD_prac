@@ -1,0 +1,150 @@
+classDiagram
+    class City {
+        <<enumeration>>
+        BANGALORE
+        MUMBAI
+        DELHI
+        HYDERABAD
+        CHENNAI
+    }
+
+    class Theater {
+        -String id
+        -String name
+        -City city
+        -List~Screen~ screens
+    }
+
+    class Screen {
+        -String id
+        -String name
+        -int rows
+        -int cols
+        -int totalSeats
+    }
+
+    class Show {
+        -String id
+        -String movieName
+        -Screen screen
+        -LocalDateTime showTime
+        -int durationMinutes
+        -double basePrice
+    }
+
+    class Seat {
+        -String seatId
+        -int row
+        -int col
+    }
+
+    class SeatStatus {
+        <<enumeration>>
+        AVAILABLE
+        LOCKED
+        BOOKED
+    }
+
+    class Booking {
+        -String bookingId
+        -String userId
+        -Show show
+        -List~Seat~ seats
+        -double totalAmount
+        -BookingStatus status
+        -LocalDateTime createdAt
+    }
+
+    class BookingStatus {
+        <<enumeration>>
+        PENDING
+        CONFIRMED
+        CANCELLED
+        EXPIRED
+    }
+
+    class Payment {
+        -String paymentId
+        -Booking booking
+        -double amount
+        -boolean success
+    }
+
+    class SeatLockInfo {
+        -String userId
+        -LocalDateTime lockedAt
+        -LocalDateTime expiresAt
+    }
+
+    class BookingFacade {
+        -ShowRepository showRepo
+        -BookingRepository bookingRepo
+        -SeatLockService lockService
+        -PaymentService paymentService
+        +searchShows(city, movieName, date) List~Show~
+        +getAvailableSeats(showId) List~Seat~
+        +lockSeats(showId, userId, seatIds) boolean
+        +confirmBooking(showId, userId) Booking
+        +cancelBooking(bookingId) void
+        +releaseExpiredLocks(showId) int
+    }
+
+    class SeatLockService {
+        -Map~ShowId,Map~SeatId,SeatLockInfo~~ locks
+        -long lockDurationMs
+        +lockSeats(showId, userId, seatIds) boolean
+        +unlockSeats(showId, seatIds) void
+        +isLockedByUser(showId, seatId, userId) boolean
+        +getExpiredLocks(showId) List~SeatId~
+        +getLockedSeats(showId, userId) List~SeatId~
+    }
+
+    class PaymentService {
+        +processPayment(booking, amount) Payment
+    }
+
+    class ShowRepository {
+        -Map~String,Show~ shows
+        -List~Show~ allShows
+        +search(city, movieName, date) List~Show~
+        +getById(showId) Show
+    }
+
+    class BookingRepository {
+        -Map~String,Booking~ bookings
+        +save(booking) void
+        +getById(bookingId) Booking
+        +getByUser(userId) List~Booking~
+    }
+
+    class BookingEventListener {
+        <<interface>>
+        +onBookingConfirmed(booking) void
+        +onBookingCancelled(booking) void
+    }
+
+    class AuditEventListener {
+        -List~String~ auditLog
+        +onBookingConfirmed(booking) void
+        +onBookingCancelled(booking) void
+    }
+
+    class LoyaltyEventListener {
+        -Map~String, Integer~ balances
+        +onBookingConfirmed(booking) void
+        +onBookingCancelled(booking) void
+    }
+
+    Theater "1" *-- "many" Screen : owns
+    Screen "1" *-- "many" Show : hosts
+    Show "1" o-- "many" Booking : generates
+    Booking "1" *-- "many" Seat : contains
+    Booking "1" *-- "1" Payment : has
+    BookingFacade --> ShowRepository : uses
+    BookingFacade --> BookingRepository : uses
+    BookingFacade --> SeatLockService : uses
+    BookingFacade --> PaymentService : uses
+    BookingFacade --> BookingEventListener : notifies
+    SeatLockService --> SeatLockInfo : manages
+    AuditEventListener ..|> BookingEventListener : implements
+    LoyaltyEventListener ..|> BookingEventListener : implements

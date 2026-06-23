@@ -1,0 +1,145 @@
+classDiagram
+    class SplitType {
+        <<enumeration>>
+        EQUAL
+        EXACT
+        PERCENTAGE
+    }
+
+    class User {
+        -String id
+        -String name
+        -String email
+    }
+
+    class Group {
+        -String id
+        -String name
+        -List~User~ members
+        +addMember(user) void
+        +removeMember(userId) void
+    }
+
+    class Split {
+        -User user
+        -BigDecimal amount
+    }
+
+    class Expense {
+        -String id
+        -String description
+        -BigDecimal amount
+        -User paidBy
+        -List~Split~ splits
+        -SplitType splitType
+        -Group group
+        -LocalDateTime createdAt
+    }
+
+    class Settlement {
+        -String id
+        -User payer
+        -User payee
+        -BigDecimal amount
+        -LocalDateTime settledAt
+    }
+
+    class SplitStrategy {
+        <<interface>>
+        +calculate(amount, participants, metadata) List~Split~
+    }
+
+    class EqualSplitStrategy {
+        +calculate(amount, participants, metadata) List~Split~
+    }
+
+    class ExactSplitStrategy {
+        +calculate(amount, participants, metadata) List~Split~
+    }
+
+    class PercentageSplitStrategy {
+        +calculate(amount, participants, metadata) List~Split~
+    }
+
+    class SplitStrategyFactory {
+        +get(splitType) SplitStrategy
+    }
+
+    class BalanceService {
+        -Map~String, Map~String, BigDecimal~~ balances
+        +updateOnExpense(expense) void
+        +updateOnSettlement(settlement) void
+        +getBalance(userA, userB) BigDecimal
+        +getBalanceSummary(userId) Map~String, BigDecimal~
+        +simplifyDebts(userIds) List~Settlement~
+    }
+
+    class ExpenseService {
+        -ExpenseRepository expenseRepo
+        -BalanceService balanceService
+        -SplitStrategyFactory strategyFactory
+        +addExpense(description, amount, paidBy, participants, splitType, metadata, group) Expense
+        +getExpensesForUser(userId) List~Expense~
+        +getExpensesForGroup(groupId) List~Expense~
+    }
+
+    class SplitwiseFacade {
+        -UserRepository userRepo
+        -GroupRepository groupRepo
+        -ExpenseService expenseService
+        -BalanceService balanceService
+        +registerUser(name, email) User
+        +createGroup(name, memberIds) Group
+        +addExpense(...) Expense
+        +settle(payerId, payeeId, amount) Settlement
+        +getBalance(userIdA, userIdB) BigDecimal
+        +getBalanceSummary(userId) Map~String, BigDecimal~
+        +simplifyDebts(groupId) List~Settlement~
+    }
+
+    class UserRepository {
+        -Map~String, User~ users
+        +save(user) void
+        +getById(userId) User
+    }
+
+    class GroupRepository {
+        -Map~String, Group~ groups
+        +save(group) void
+        +getById(groupId) Group
+    }
+
+    class ExpenseRepository {
+        -List~Expense~ expenses
+        +save(expense) void
+        +findByUser(userId) List~Expense~
+        +findByGroup(groupId) List~Expense~
+    }
+
+    class SplitwiseEventListener {
+        <<interface>>
+        +onExpenseAdded(expense) void
+        +onSettlementRecorded(settlement) void
+    }
+
+    SplitStrategy <|.. EqualSplitStrategy : implements
+    SplitStrategy <|.. ExactSplitStrategy : implements
+    SplitStrategy <|.. PercentageSplitStrategy : implements
+    SplitStrategyFactory --> SplitStrategy : creates
+
+    Expense "1" *-- "many" Split : owns
+    Expense --> User : paid by
+    Expense --> Group : belongs to
+    Group "1" o-- "many" User : has members
+    Split --> User : belongs to
+
+    SplitwiseFacade --> ExpenseService : uses
+    SplitwiseFacade --> BalanceService : uses
+    SplitwiseFacade --> UserRepository : uses
+    SplitwiseFacade --> GroupRepository : uses
+
+    ExpenseService --> ExpenseRepository : uses
+    ExpenseService --> BalanceService : uses
+    ExpenseService --> SplitStrategyFactory : uses
+
+    SplitwiseFacade --> SplitwiseEventListener : notifies

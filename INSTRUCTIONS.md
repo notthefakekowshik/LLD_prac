@@ -104,6 +104,8 @@ classDiagram
 
 **Rule:** Prefer composition over inheritance. Only use inheritance when there is a true "is-a" relationship that will never change.
 
+**Class Diagram File Rule:** After finalizing the class diagram in `DESIGN_DICE.md`, always extract the raw `classDiagram` block (without markdown fences) into a standalone `class_diagram.mermaid` file in the same system package directory. This makes the diagram directly renderable by Mermaid tooling (Live Editor, IDE plugins) without wading through the full design document.
+
 ---
 
 ### Step 3: **C**ode (Implementation)
@@ -343,6 +345,7 @@ com.lldprep.systems.<system>/    → Real system / machine coding problems
     README.md     → Design overview, patterns used, quickstart
     DESIGN.md     → Abbreviated D.I.C.E. workflow
     DESIGN_DICE.md→ Complete D.I.C.E. workflow with class diagrams
+    class_diagram.mermaid → Raw classDiagram block extracted from DESIGN_DICE.md (no fences — renderable directly)
     SCHEMA.md     → Database schema (ER diagram, tables, locking strategy) — Phase 4 only
     API_CONTRACT.md→ REST API contract (Phase 4 user-facing systems only — see Section 2.6)
 ```
