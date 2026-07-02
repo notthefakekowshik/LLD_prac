@@ -18,6 +18,7 @@
 
 # java
 - Java package declarations must match the file path exactly — use `com.lldprep.systems.<systemname>.*` (plural "systems") to match the directory structure under `com/lldprep/systems/`. Confidence: 0.85
+- For educational content explaining Java concepts, create Java runnable files (with a main method) instead of markdown documentation files. Confidence: 0.65
 
 # communication-style
 - Never present inline code in conversation responses — it's not readable. Use file references, summaries, or write to files instead. Confidence: 0.85
@@ -27,3 +28,6 @@
 
 # critical-thinking
 - Design specs (like DESIGN_DICE.md) are not infallible — always cross-check facts, validate relationships, and identify mistakes rather than treating design documents as unquestionable source of truth. Confidence: 0.85
+
+# testing
+- Do not write JUnit test files; instead create comprehensive demo main methods with clear scenario headers, inputs, expected effects, and actual outputs for manual verification. Confidence: 0.75
