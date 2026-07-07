@@ -157,6 +157,18 @@ com.lldprep.foundations/
 
 ---
 
+## Code Review Exercises
+
+`code-review/` holds interview-style **code review** practice — realistic
+multi-file PRs with seeded issues, graded against `code-review/RUBRIC.md`.
+Two project skills drive it (in `.claude/skills/`):
+- **code-review-author** — create a new exercise ("make a code review exercise about X").
+- **code-review-interview** — run + grade a mock review ("run code review exercise 01").
+
+Never reveal an exercise's `ANSWER_KEY.md` to the candidate before they submit.
+
+---
+
 ## Reference Files
 
 - `INSTRUCTIONS.md` — Full D.I.C.E. workflow and architectural standards
