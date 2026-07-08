@@ -23,39 +23,76 @@ import java.util.concurrent.TimeUnit;
 public class SplitwiseDemo {
     private static final BigDecimal ZERO = money("0");
 
+    // ponytail: static fields hold the demo's shared actors, wired once in setUp() and reused by
+    // every scenario below. Fine for a single-threaded demo runner; not a pattern for real state.
+    private static SplitwiseFacade splitwise;
+    private static List<String> auditLog;
+    private static User alice;
+    private static User bob;
+    private static User charlie;
+    private static User dave;
+    private static Group goaTrip;
+
+    // Each scenario is its own method, in the order they run. Read top-to-bottom like a table of contents.
     public static void main(String[] args) throws InterruptedException {
-        System.out.println("============================================================");
-        System.out.println("SPLITWISE LLD DEMO");
-        System.out.println("Patterns: Strategy | Factory | Repository | Facade | Observer");
-        System.out.println("============================================================\n");
+        printHeader();
+        setUp();
 
-        SplitwiseFacade splitwise = new SplitwiseFacade();
-        List<String> auditLog = Collections.synchronizedList(new ArrayList<>());
+        registerUsers();       // 1
+        createGroup();         // 2
+        equalSplit();          // 3
+//        exactSplit();          // 4
+//        percentageSplit();     // 5
+//        balanceSummary();      // 6
+//        settleUp();            // 7
+//        expenseHistory();      // 8
+//        validationFailures();  // 9
+//        debtSimplification();  // 10
+//        concurrency();         // 11
+//        observerAuditLog();    // 12
+        successSummary();      // 13
+    }
+
+    // Build the facade and attach an audit listener (Observer) that records every event.
+    private static void setUp() {
+        splitwise = new SplitwiseFacade();
+        auditLog = Collections.synchronizedList(new ArrayList<>());
         splitwise.addListener(new AuditListener(auditLog));
+    }
 
-        User alice = splitwise.registerUser("Alice", "alice@example.com");
-        User bob = splitwise.registerUser("Bob", "bob@example.com");
-        User charlie = splitwise.registerUser("Charlie", "charlie@example.com");
-        User dave = splitwise.registerUser("Dave", "dave@example.com");
-
+    // 1. Register the four users that the rest of the scenarios reuse.
+    private static void registerUsers() {
         scenario("1. Register users");
+        alice = splitwise.registerUser("Alice", "alice@example.com");
+        bob = splitwise.registerUser("Bob", "bob@example.com");
+        charlie = splitwise.registerUser("Charlie", "charlie@example.com");
+        dave = splitwise.registerUser("Dave", "dave@example.com");
         printUsers(alice, bob, charlie, dave);
+    }
 
+    // 2. Create a group; only its members may share group-scoped expenses.
+    private static void createGroup() {
         scenario("2. Create group");
-        Group goaTrip = splitwise.createGroup("Goa Trip", ids(alice, bob, charlie));
+        goaTrip = splitwise.createGroup("Goa Trip", ids(alice, bob, charlie));
         System.out.println("Group: " + goaTrip);
         System.out.println("Members: " + names(goaTrip.getMembers()));
         System.out.println();
+    }
 
+    // 3. Equal split: total divided evenly across all participants.
+    private static void equalSplit() {
         scenario("3. Equal split - Alice pays 900 dinner for Alice/Bob/Charlie");
         Expense dinner = splitwise.addExpense("Dinner", money("900"), alice.getId(),
             ids(alice, bob, charlie), SplitType.EQUAL, Map.of(), goaTrip.getId());
         printExpense(dinner);
         System.out.println("Expected: Bob owes Alice 300.00, Charlie owes Alice 300.00");
-        printPairBalance(splitwise, bob, alice);
-        printPairBalance(splitwise, charlie, alice);
+        printPairBalance(bob, alice);
+        printPairBalance(charlie, alice);
         System.out.println();
+    }
 
+    // 4. Exact split: each participant's amount is given and must sum to the total.
+    private static void exactSplit() {
         scenario("4. Exact split - Bob pays 600 hotel: Alice 250, Bob 200, Charlie 150");
         Expense hotel = splitwise.addExpense("Hotel", money("600"), bob.getId(),
             ids(alice, bob, charlie), SplitType.EXACT,
@@ -63,11 +100,14 @@ public class SplitwiseDemo {
             goaTrip.getId());
         printExpense(hotel);
         System.out.println("Expected net: Bob now owes Alice 50.00; Charlie owes Bob 150.00; Charlie still owes Alice 300.00");
-        printPairBalance(splitwise, bob, alice);
-        printPairBalance(splitwise, charlie, bob);
-        printPairBalance(splitwise, charlie, alice);
+        printPairBalance(bob, alice);
+        printPairBalance(charlie, bob);
+        printPairBalance(charlie, alice);
         System.out.println();
+    }
 
+    // 5. Percentage split: shares given as percentages that must total 100.
+    private static void percentageSplit() {
         scenario("5. Percentage split - Charlie pays 800 cab: Alice 50%, Bob 25%, Charlie 25%");
         Expense cab = splitwise.addExpense("Cab", money("800"), charlie.getId(),
             ids(alice, bob, charlie), SplitType.PERCENTAGE,
@@ -75,29 +115,41 @@ public class SplitwiseDemo {
             goaTrip.getId());
         printExpense(cab);
         System.out.println("Expected net: Bob owes Alice 50.00; Alice owes Charlie 100.00; Bob owes Charlie 50.00");
-        printPairBalance(splitwise, bob, alice);
-        printPairBalance(splitwise, alice, charlie);
-        printPairBalance(splitwise, bob, charlie);
+        printPairBalance(bob, alice);
+        printPairBalance(alice, charlie);
+        printPairBalance(bob, charlie);
         System.out.println();
+    }
 
+    // 6. Net balance summary from a single user's perspective.
+    private static void balanceSummary() {
         scenario("6. Balance summary for Alice");
-        printSummary(splitwise, alice, List.of(bob, charlie, dave));
+        printSummary(alice, List.of(bob, charlie, dave));
         System.out.println("Expected: Alice is owed 50.00 by Bob, owes 100.00 to Charlie, net -50.00");
         System.out.println();
+    }
 
+    // 7. Settle up: a direct payment that reduces an outstanding balance to zero.
+    private static void settleUp() {
         scenario("7. Settlement - Bob pays Alice 50");
         Settlement settlement = splitwise.settle(bob.getId(), alice.getId(), money("50"));
         System.out.println("Settlement recorded: " + settlement);
         System.out.println("Expected: Bob/Alice pair is now zero");
-        printPairBalance(splitwise, bob, alice);
-        printSummary(splitwise, alice, List.of(bob, charlie, dave));
+        printPairBalance(bob, alice);
+        printSummary(alice, List.of(bob, charlie, dave));
         System.out.println();
+    }
 
+    // 8. Expense history, per user and per group, in chronological order.
+    private static void expenseHistory() {
         scenario("8. Expense history");
         printHistory("Alice expense history", splitwise.getExpensesForUser(alice.getId()));
         printHistory("Goa Trip expense history", splitwise.getExpensesForGroup(goaTrip.getId()));
         System.out.println();
+    }
 
+    // 9. Validation guards: non-member, bad exact sum, bad percentage sum, over-settlement.
+    private static void validationFailures() {
         scenario("9. Expected validation failures");
         expectFailure("non-member Dave in Goa Trip expense", () -> splitwise.addExpense("Snacks", money("300"), alice.getId(),
             ids(alice, dave), SplitType.EQUAL, Map.of(), goaTrip.getId()));
@@ -109,7 +161,10 @@ public class SplitwiseDemo {
             Map.of(alice.getId(), money("40"), bob.getId(), money("40")), null));
         expectFailure("settlement over outstanding balance", () -> splitwise.settle(alice.getId(), charlie.getId(), money("999")));
         System.out.println();
+    }
 
+    // 10. Debt simplification is read-only: it suggests fewer transfers without mutating balances.
+    private static void debtSimplification() {
         scenario("10. Debt simplification suggestion - read-only");
         BigDecimal beforeAliceCharlie = splitwise.getBalance(alice.getId(), charlie.getId());
         List<Settlement> suggestions = splitwise.simplifyDebts(goaTrip.getId());
@@ -121,14 +176,20 @@ public class SplitwiseDemo {
         System.out.println("Read-only check: Alice/Charlie before=" + beforeAliceCharlie + ", after=" + afterAliceCharlie);
         System.out.println("Expected: same value; simplifyDebts does not mutate balances");
         System.out.println();
+    }
 
+    // 11. Concurrency: two threads add same-pair expenses; per-pair locking keeps the balance correct.
+    private static void concurrency() throws InterruptedException {
         scenario("11. Concurrency - two threads add same-pair expenses");
         splitwise.addMember(goaTrip.getId(), dave.getId());
-        runConcurrencyScenario(splitwise, alice, dave);
+        runConcurrentExpenses();
         System.out.println("Expected: 50 expenses * 5.00 Dave share = Dave owes Alice 250.00");
-        printPairBalance(splitwise, dave, alice);
+        printPairBalance(dave, alice);
         System.out.println();
+    }
 
+    // 12. Observer: the audit listener captured every expense and settlement event.
+    private static void observerAuditLog() {
         scenario("12. Observer audit log");
         System.out.println("Audit events captured: " + auditLog.size());
         auditLog.stream().limit(10).forEach(entry -> System.out.println("  " + entry));
@@ -136,21 +197,25 @@ public class SplitwiseDemo {
             System.out.println("  ... " + (auditLog.size() - 10) + " more events");
         }
         System.out.println();
+    }
 
+    // 13. Final totals and key balances.
+    private static void successSummary() {
         scenario("13. Success summary");
         System.out.println("Total users: " + splitwise.totalUsers());
         System.out.println("Total groups: " + splitwise.totalGroups());
         System.out.println("Total expenses: " + splitwise.totalExpenses());
         System.out.println("Total settlements: " + splitwise.totalSettlements());
         System.out.println("Final key balances:");
-        printPairBalance(splitwise, bob, alice);
-        printPairBalance(splitwise, alice, charlie);
-        printPairBalance(splitwise, bob, charlie);
-        printPairBalance(splitwise, dave, alice);
+        printPairBalance(bob, alice);
+        printPairBalance(alice, charlie);
+        printPairBalance(bob, charlie);
+        printPairBalance(dave, alice);
         System.out.println("\nALL SPLITWISE SCENARIOS COMPLETED");
     }
 
-    private static void runConcurrencyScenario(SplitwiseFacade splitwise, User alice, User dave) throws InterruptedException {
+    // Fires 2 threads x 25 equal-split expenses on the Alice/Dave pair, all released together.
+    private static void runConcurrentExpenses() throws InterruptedException {
         int threadCount = 2;
         int expensesPerThread = 25;
         CountDownLatch start = new CountDownLatch(1);
@@ -177,6 +242,13 @@ public class SplitwiseDemo {
         }
     }
 
+    private static void printHeader() {
+        System.out.println("============================================================");
+        System.out.println("SPLITWISE LLD DEMO");
+        System.out.println("Patterns: Strategy | Factory | Repository | Facade | Observer");
+        System.out.println("============================================================\n");
+    }
+
     private static void printUsers(User... users) {
         for (User user : users) {
             System.out.println("  " + user.getName() + " | " + user.getId() + " | " + user.getEmail());
@@ -200,7 +272,7 @@ public class SplitwiseDemo {
         }
     }
 
-    private static void printPairBalance(SplitwiseFacade splitwise, User userA, User userB) {
+    private static void printPairBalance(User userA, User userB) {
         BigDecimal balance = splitwise.getBalance(userA.getId(), userB.getId());
         if (balance.compareTo(ZERO) > 0) {
             System.out.println("  " + userA.getName() + " owes " + userB.getName() + " " + balance);
@@ -211,7 +283,7 @@ public class SplitwiseDemo {
         }
     }
 
-    private static void printSummary(SplitwiseFacade splitwise, User user, List<User> knownUsers) {
+    private static void printSummary(User user, List<User> knownUsers) {
         Map<String, BigDecimal> summary = splitwise.getBalanceSummary(user.getId());
         BigDecimal net = ZERO;
         System.out.println("Balance summary for " + user.getName() + ":");

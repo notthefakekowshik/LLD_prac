@@ -1,0 +1,125 @@
+classDiagram
+    class SnakeAndLadderGame {
+        -Board board
+        -Die die
+        -MovePolicy movePolicy
+        -TurnPolicy turnPolicy
+        -List~Player~ players
+        -int currentPlayerIndex
+        -int consecutiveBonus
+        -GameStatus status
+        -Player winner
+        +playTurn() TurnResult
+        +play() Player
+        +isFinished() boolean
+        +getWinner() Optional~Player~
+        +getStatus() GameStatus
+        +getPlayers() List~Player~
+    }
+
+    class Board {
+        -int size
+        -Map~Integer,Jump~ jumpsByStart
+        +getDestination(position) int
+        +hasJumpAt(position) boolean
+        +getSize() int
+        +getJumps() Collection~Jump~
+    }
+
+    class Jump {
+        <<abstract>>
+        -int start
+        -int end
+        +getStart() int
+        +getEnd() int
+        +type() String
+    }
+
+    class Snake
+    class Ladder
+
+    class Player {
+        -String id
+        -String name
+        -int position
+        +moveTo(position)
+        +getPosition() int
+    }
+
+    class TurnResult {
+        <<record>>
+        +String playerName
+        +int diceRoll
+        +int fromPosition
+        +int toPosition
+        +boolean tookJump
+        +GameStatus status
+        +stayedPut() boolean
+    }
+
+    class Die {
+        <<interface>>
+        +roll() int
+        +maxValue() int
+    }
+
+    class StandardDie {
+        -int faces
+        -Random random
+        +roll() int
+        +maxValue() int
+    }
+
+    class MovePolicy {
+        <<interface>>
+        +computeTarget(current, roll, size) int
+    }
+
+    class ExactLandingMovePolicy
+    class BounceBackMovePolicy
+
+    class TurnPolicy {
+        <<interface>>
+        +decide(roll, dieMaxValue, consecutiveBonus) TurnDecision
+    }
+
+    class SimpleTurnPolicy
+    class ExtraTurnOnMaxRollPolicy
+
+    class TurnDecision {
+        <<record>>
+        +boolean applyMove
+        +boolean grantsExtraTurn
+        +int nextConsecutiveBonus
+    }
+
+    class BoardFactory {
+        +standard() Board
+        +custom(size, jumps) Board
+    }
+
+    class GameStatus {
+        <<enum>>
+        IN_PROGRESS
+        FINISHED
+        +isOver() boolean
+    }
+
+    Die <|.. StandardDie : implements
+    MovePolicy <|.. ExactLandingMovePolicy : implements
+    MovePolicy <|.. BounceBackMovePolicy : implements
+    TurnPolicy <|.. SimpleTurnPolicy : implements
+    TurnPolicy <|.. ExtraTurnOnMaxRollPolicy : implements
+    Jump <|-- Snake : extends
+    Jump <|-- Ladder : extends
+
+    SnakeAndLadderGame *-- Board : owns (DIP)
+    SnakeAndLadderGame *-- Die : owns (DIP)
+    SnakeAndLadderGame *-- MovePolicy : owns (DIP)
+    SnakeAndLadderGame *-- TurnPolicy : owns (DIP)
+    SnakeAndLadderGame o-- Player : aggregates
+    SnakeAndLadderGame --> GameStatus : has
+    SnakeAndLadderGame ..> TurnResult : returns
+    TurnPolicy ..> TurnDecision : returns
+    Board o-- Jump : indexes
+    BoardFactory ..> Board : creates

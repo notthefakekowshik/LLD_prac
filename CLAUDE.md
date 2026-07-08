@@ -128,9 +128,10 @@ com.lldprep.foundations/
 - [x] Vending Machine
 - [x] ATM Machine
 - [x] Movie Booking System (BookMyShow)
+- [x] Snake and Ladder
+- [ ] Minesweeper — *built, needs a revision pass before marking complete*
 - [ ] Splitwise
 - [ ] Chess
-- [ ] Snake and Ladder
 - [ ] Hotel Management System
 - [ ] Library Management System
 

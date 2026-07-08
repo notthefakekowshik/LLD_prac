@@ -1,0 +1,102 @@
+classDiagram
+    class MinesweeperGame {
+        -Board board
+        -GameStatus status
+        +reveal(row, col) MoveResult
+        +toggleFlag(row, col) MoveResult
+        +getStatus() GameStatus
+        +getBoard() Board
+    }
+
+    class Board {
+        -int rows
+        -int cols
+        -int mineCount
+        -Cell[][] grid
+        -MinePlacementStrategy placementStrategy
+        -boolean minesPlaced
+        -int revealedSafeCells
+        +reveal(row, col) boolean
+        +toggleFlag(row, col) boolean
+        +allSafeCellsRevealed() boolean
+        +revealAllMines()
+        +render() String
+        +getCell(row, col) Cell
+    }
+
+    class Cell {
+        -int row
+        -int col
+        -boolean mine
+        -int adjacentMines
+        -CellState state
+        +reveal() boolean
+        +toggleFlag() boolean
+        +placeMine()
+        +setAdjacentMines(count)
+        +isMine() boolean
+        +toDisplayChar() char
+    }
+
+    class MoveResult {
+        <<record>>
+        +GameStatus status
+        +String message
+    }
+
+    class MinePlacementStrategy {
+        <<interface>>
+        +placeMines(grid, mineCount, safeRow, safeCol)
+    }
+
+    class RandomMinePlacementStrategy {
+        -Random random
+        +placeMines(grid, mineCount, safeRow, safeCol)
+    }
+
+    class SafeFirstClickMinePlacementStrategy {
+        -Random random
+        +placeMines(grid, mineCount, safeRow, safeCol)
+    }
+
+    class BoardFactory {
+        +fromDifficulty(difficulty, strategy) Board
+        +custom(rows, cols, mines, strategy) Board
+    }
+
+    class CellState {
+        <<enum>>
+        HIDDEN
+        REVEALED
+        FLAGGED
+    }
+
+    class GameStatus {
+        <<enum>>
+        IN_PROGRESS
+        WON
+        LOST
+        +isOver() boolean
+    }
+
+    class Difficulty {
+        <<enum>>
+        BEGINNER
+        INTERMEDIATE
+        EXPERT
+        +getRows() int
+        +getCols() int
+        +getMines() int
+    }
+
+    MinePlacementStrategy <|.. RandomMinePlacementStrategy : implements
+    MinePlacementStrategy <|.. SafeFirstClickMinePlacementStrategy : implements
+
+    MinesweeperGame *-- Board : owns (DIP)
+    Board *-- Cell : composition
+    Board *-- MinePlacementStrategy : owns (DIP)
+    Cell --> CellState : has
+    MinesweeperGame --> GameStatus : has
+    MinesweeperGame ..> MoveResult : returns
+    BoardFactory ..> Board : creates
+    BoardFactory ..> Difficulty : reads
