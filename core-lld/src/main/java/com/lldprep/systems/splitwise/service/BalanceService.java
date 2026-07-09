@@ -36,15 +36,15 @@ public class BalanceService {
     }
 
     public void updateOnSettlement(Settlement settlement) {
-        String payerId = settlement.getPayer().getId();
-        String payeeId = settlement.getPayee().getId();
+        String payerId = settlement.getSender().getId();
+        String payeeId = settlement.getReceiver().getId();
         BigDecimal amount = normalize(settlement.getAmount());
 
         synchronized (getLock(payerId, payeeId)) {
             BigDecimal current = getBalanceUnsafe(payerId, payeeId);
             if (current.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new InvalidSettlementException(settlement.getPayer().getName()
-                    + " does not owe " + settlement.getPayee().getName());
+                throw new InvalidSettlementException(settlement.getSender().getName()
+                    + " does not owe " + settlement.getReceiver().getName());
             }
             if (amount.compareTo(current) > 0) {
                 throw new InvalidSettlementException("Settlement amount " + amount

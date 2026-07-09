@@ -30,8 +30,8 @@ public class SettlementRepository {
     }
 
     private boolean isPair(Settlement settlement, String userA, String userB) {
-        String payerId = settlement.getPayer().getId();
-        String payeeId = settlement.getPayee().getId();
+        String payerId = settlement.getSender().getId();
+        String payeeId = settlement.getReceiver().getId();
         return (payerId.equals(userA) && payeeId.equals(userB))
             || (payerId.equals(userB) && payeeId.equals(userA));
     }

@@ -1,6 +1,7 @@
 package com.lldprep.systems.splitwise.demo;
 
 import com.lldprep.systems.splitwise.exception.SplitwiseException;
+import com.lldprep.systems.splitwise.listener.AuditListener;
 import com.lldprep.systems.splitwise.model.Expense;
 import com.lldprep.systems.splitwise.model.Group;
 import com.lldprep.systems.splitwise.model.Settlement;
@@ -333,22 +334,4 @@ public class SplitwiseDemo {
         System.out.println("------------------------------------------------------------");
     }
 
-    private static class AuditListener implements SplitwiseEventListener {
-        private final List<String> auditLog;
-
-        private AuditListener(List<String> auditLog) {
-            this.auditLog = auditLog;
-        }
-
-        @Override
-        public void onExpenseAdded(Expense expense) {
-            auditLog.add("EXPENSE " + expense.getId() + " | " + expense.getDescription()
-                + " | " + expense.getAmount() + " | paidBy=" + expense.getPaidBy().getName());
-        }
-
-        @Override
-        public void onSettlementRecorded(Settlement settlement) {
-            auditLog.add("SETTLEMENT " + settlement.getId() + " | " + settlement);
-        }
-    }
 }

@@ -6,15 +6,15 @@ import java.util.UUID;
 
 public class Settlement {
     private final String id;
-    private final User payer;
-    private final User payee;
+    private final User sender;
+    private final User receiver;
     private final BigDecimal amount;
     private final LocalDateTime settledAt;
 
-    public Settlement(User payer, User payee, BigDecimal amount) {
+    public Settlement(User sender, User receiver, BigDecimal amount) {
         this.id = "STL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        this.payer = payer;
-        this.payee = payee;
+        this.sender = sender;
+        this.receiver = receiver;
         this.amount = amount;
         this.settledAt = LocalDateTime.now();
     }
@@ -23,12 +23,12 @@ public class Settlement {
         return id;
     }
 
-    public User getPayer() {
-        return payer;
+    public User getSender() {
+        return sender;
     }
 
-    public User getPayee() {
-        return payee;
+    public User getReceiver() {
+        return receiver;
     }
 
     public BigDecimal getAmount() {
@@ -41,6 +41,6 @@ public class Settlement {
 
     @Override
     public String toString() {
-        return payer.getName() + " -> " + payee.getName() + " : " + amount;
+        return sender.getName() + " -> " + receiver.getName() + " : " + amount;
     }
 }
