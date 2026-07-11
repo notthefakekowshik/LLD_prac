@@ -63,6 +63,18 @@ public class ThreadLocalLeakDemo {
         }
     }
 
+    public static void main(String[] args) throws InterruptedException {
+        dataBleeding();
+        memoryGrowth();
+        correctPattern();
+        uniqueThreadLocalPerRequest();
+
+        log.info("=== Summary ===");
+        log.info("Rule 1: Always call threadLocal.remove() in a finally block after each task.");
+        log.info("Rule 2: Declare ThreadLocal as 'private static final' — never per-request.");
+        log.info("Rule 3: In Java 21+, prefer ScopedValue over ThreadLocal for request-scoped data.");
+    }
+
     // -------------------------------------------------------------------------
     // Scenario 1: DATA BLEEDING — no remove()
     //
@@ -212,15 +224,4 @@ public class ThreadLocalLeakDemo {
         log.info("Fix: Always use STATIC final ThreadLocal — never create one per request.\n");
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        dataBleeding();
-        memoryGrowth();
-        correctPattern();
-        uniqueThreadLocalPerRequest();
-
-        log.info("=== Summary ===");
-        log.info("Rule 1: Always call threadLocal.remove() in a finally block after each task.");
-        log.info("Rule 2: Declare ThreadLocal as 'private static final' — never per-request.");
-        log.info("Rule 3: In Java 21+, prefer ScopedValue over ThreadLocal for request-scoped data.");
-    }
 }

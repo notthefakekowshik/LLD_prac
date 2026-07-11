@@ -11,7 +11,10 @@
 
 # design-philosophy
 - Solutions must be interview-appropriate — design for what can be reasoned about and coded in ~1 hour, not over-engineered production systems. Confidence: 0.85
-- Avoid over-abstracting with inner interfaces and static mock implementations — keep listener/observer classes simple and direct without unnecessary abstraction layers. Confidence: 0.70
+- Avoid over-abstracting with inner interfaces and static mock implementations — keep listener/observer classes simple and direct without unnecessary abstraction layers. Question whether Observer/Listener patterns are needed at all before adding them. Confidence: 0.80
+
+# reference-implementations
+- When referencing a prior implementation for guidance, adopt its format and structure (e.g., md files, java files layout) — do NOT blindly copy its classes, patterns, or content. Apply critical thinking to determine what the current system actually needs. Confidence: 0.75
 
 # implementation
 - When DESIGN.md specifies an entity, pattern, or class, fully wire it into the implementation — don't leave design artifacts (entities, listeners, enums) declared in design docs but unimplemented or unintegrated in code. Confidence: 0.70

@@ -39,13 +39,13 @@ public class SemaphoreDemo {
 
         Thread.sleep(2000);
 
-        // Demo 2: Parking lot
-        parkingLotDemo();
-
-        Thread.sleep(2000);
-
-        // Demo 3: Rate limiting
-        rateLimitingDemo();
+//        [// Demo 2: Parking lot
+//        parkingLotDemo();
+//
+//        Thread.sleep(2000);
+//
+//        // Demo 3: Rate limiting
+//        rateLimitingDemo();]
     }
 
     /**
@@ -68,7 +68,7 @@ public class SemaphoreDemo {
                             userId, connectionPool.availablePermits());
 
                     // Simulate database query
-                    Thread.sleep((long) (Math.random() * 2000));
+                    Thread.sleep((long) (10000));
 
                     logger.info("User {} releasing connection", userId);
                 } catch (InterruptedException e) {

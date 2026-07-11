@@ -83,6 +83,12 @@ public class SplitwiseDemo {
     // 3. Equal split: total divided evenly across all participants.
     private static void equalSplit() {
         scenario("3. Equal split - Alice pays 900 dinner for Alice/Bob/Charlie");
+        /*
+        Here, I thought we need not participants list, we can have group ID and fetch the group members with ID.
+            What if all the users do not participate in this expense? If the group has 10 members, not everyone can go to lunch/dinner.
+            there's group validation down the line which check if these participants are part of the group.
+            com.lldprep.systems.splitwise.service.ExpenseService.validateGroupMembership
+         */
         Expense dinner = splitwise.addExpense("Dinner", money("900"), alice.getId(),
             ids(alice, bob, charlie), SplitType.EQUAL, Map.of(), goaTrip.getId());
         printExpense(dinner);

@@ -19,6 +19,15 @@ import java.util.concurrent.TimeoutException;
  */
 public class TimeoutAndCancellationPatterns {
 
+    public static void main(String[] args) throws Exception {
+        demoOrTimeout();
+        demoCompleteOnTimeout();
+        demoLegacyTimeout();
+        demoCancel();
+        demoCancellingSlowRunners();
+        demoStructuredShutdown();
+    }
+
     // ──────────────────────────────────────────────
     // 1. orTimeout — fail fast if operation takes too long (Java 9+)
     // ──────────────────────────────────────────────
@@ -30,10 +39,11 @@ public class TimeoutAndCancellationPatterns {
                     sleep(5000); // Simulate very slow operation
                     return "Too late";
                 })
-                .orTimeout(500, TimeUnit.MILLISECONDS);
+                .orTimeout(50000, TimeUnit.MILLISECONDS);
 
         try {
-            future.get();
+            String returnedString = future.get();
+            System.out.println("  Result: " + returnedString);
         } catch (Exception e) {
             System.out.println("  Exception: " + e.getCause().getClass().getSimpleName()
                     + " — " + e.getCause().getMessage());
@@ -188,12 +198,4 @@ public class TimeoutAndCancellationPatterns {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        demoOrTimeout();
-        demoCompleteOnTimeout();
-        demoLegacyTimeout();
-        demoCancel();
-        demoCancellingSlowRunners();
-        demoStructuredShutdown();
-    }
 }

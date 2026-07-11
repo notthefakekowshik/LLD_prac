@@ -96,9 +96,9 @@ These are full interview-style problems. Target 90–120 minutes per problem fol
 - [x] **Symbol Search Engine** — IntelliJ-style "Search Everywhere" with trigram inverted index, three match strategies (Exact/CamelCase/Subsequence), LRU query cache as Decorator. ✓ *Completed 2026-04-29 (Strategy, Decorator, Builder, Template Method)*
 - [x] **Parking Lot System** — Multiple levels, multi-vehicle types (Car/Bike/Truck), EV charging spots, concurrent access. ✓ *Completed 2026-04-17 (spot allocation, fee calculation, vehicle hierarchy)*
 - [x] **Movie Booking System (BookMyShow)** — Multiple cities/theaters/screens, seat selection, concurrent booking prevention. ✓ *Completed 2026-05-31 (Facade, SeatLockService with timeout, BookingEventListener)*
-- [ ] **Splitwise** — Expense tracking, multiple split types (Equal/Exact/Percentage), balance simplification.
+- [ ] **Splitwise** *(needs revision — debt/single-edge invariant + pair-locking not yet solid)* — Expense tracking, multiple split types (Equal/Exact/Percentage), balance simplification.
 - [ ] **Snake and Ladder** — Board game with multiple players, pluggable dice, extensible for Chess pieces.
-- [ ] **Chess** — Board, pieces with movement rules, turn management, check detection.
+- [x] **Chess** — Board, pieces with movement rules, turn management, check detection. ✓ *Completed 2026-07-09 (Template Method, Factory, Observer, Facade — Scholar's Mate, castling, en passant, promotion, pin detection)*
 - [x] **Vending Machine** — Product inventory, coin handling, state machine (Idle/HasCoin/Dispensing/OutOfStock). ✓ *Completed 2026-04-14 (State Pattern, exact change mode, transaction logging)*
 - [x] **ATM Machine** — Card authentication, PIN validation, cash dispensing chain, transaction logging. ✓ *Completed 2026-05-06 (State Pattern, Chain of Responsibility, Strategy)*
 - [ ] **Hotel Management System** — Room types, booking lifecycle, housekeeping scheduling, billing.

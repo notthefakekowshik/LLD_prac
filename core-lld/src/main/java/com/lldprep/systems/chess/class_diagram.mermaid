@@ -1,0 +1,161 @@
+classDiagram
+    class Color {
+        <<enumeration>>
+        WHITE
+        BLACK
+    }
+
+    class PieceType {
+        <<enumeration>>
+        KING
+        QUEEN
+        ROOK
+        BISHOP
+        KNIGHT
+        PAWN
+    }
+
+    class GameState {
+        <<enumeration>>
+        WHITE_TO_MOVE
+        BLACK_TO_MOVE
+        WHITE_WINS
+        BLACK_WINS
+        STALEMATE
+    }
+
+    class Square {
+        -int row
+        -int col
+        +file() int
+        +rank() int
+        +offset(dRow,dCol) Square
+        +isValid() boolean
+        +toString() String
+    }
+
+    class Piece {
+        <<abstract>>
+        -Color color
+        -PieceType type
+        -boolean hasMoved
+        +getColor() Color
+        +getType() PieceType
+        +hasMoved() boolean
+        +setHasMoved() void
+        +getCandidateSquares(Board, Square) List~Square~
+        +getValidMoves(Board, Square) List~Square~
+        +copy() Piece
+    }
+
+    class King {
+        +getCandidateSquares(Board, Square) List~Square~
+        +copy() Piece
+    }
+
+    class Queen {
+        +getCandidateSquares(Board, Square) List~Square~
+        +copy() Piece
+    }
+
+    class Rook {
+        +getCandidateSquares(Board, Square) List~Square~
+        +copy() Piece
+    }
+
+    class Bishop {
+        +getCandidateSquares(Board, Square) List~Square~
+        +copy() Piece
+    }
+
+    class Knight {
+        +getCandidateSquares(Board, Square) List~Square~
+        +copy() Piece
+    }
+
+    class Pawn {
+        +getCandidateSquares(Board, Square) List~Square~
+        +copy() Piece
+    }
+
+    class Board {
+        -Piece[][] grid
+        -Square enPassantTarget
+        +getPiece(Square) Piece
+        +setPiece(Square, Piece) void
+        +movePiece(Move) void
+        +isCheck(Color) boolean
+        +isCheckmate(Color) boolean
+        +isStalemate(Color) boolean
+        +findKing(Color) Square
+        +copy() Board
+    }
+
+    class Move {
+        -Square from
+        -Square to
+        -Piece piece
+        -Piece captured
+        -PieceType promotion
+        -boolean isCastling
+        -boolean isEnPassant
+    }
+
+    class Player {
+        -String id
+        -String name
+        -Color color
+    }
+
+    class Game {
+        -String id
+        -Board board
+        -Player white
+        -Player black
+        -GameState state
+        -List~Move~ moves
+    }
+
+    class PieceFactory {
+        +create(type, color) Piece
+    }
+
+    class GameRepository {
+        -Map~String, Game~ games
+        +save(game) void
+        +getById(gameId) Game
+    }
+
+    class GameService {
+        -GameRepository gameRepo
+        +createGame(whiteName, blackName) Game
+        +makeMove(gameId, from, to, promotion) Move
+        +getGame(gameId) Game
+    }
+
+    class ChessFacade {
+        -GameRepository gameRepo
+        -GameService gameService
+        +createGame(whiteName, blackName) Game
+        +makeMove(gameId, fromStr, toStr) Move
+        +getGame(gameId) Game
+        +getBoard(gameId) String
+    }
+
+    Piece <|-- King : extends
+    Piece <|-- Queen : extends
+    Piece <|-- Rook : extends
+    Piece <|-- Bishop : extends
+    Piece <|-- Knight : extends
+    Piece <|-- Pawn : extends
+
+    Board "1" o-- "64" Square : grid cells
+    Board "1" *-- "many" Piece : positions
+    Game "1" *-- "1" Board : owns
+    Game "1" o-- "2" Player : has
+    Game "1" *-- "many" Move : records
+
+    GameService --> GameRepository : uses
+    GameService --> PieceFactory : uses
+    ChessFacade --> GameService : uses
+    ChessFacade --> GameRepository : uses
