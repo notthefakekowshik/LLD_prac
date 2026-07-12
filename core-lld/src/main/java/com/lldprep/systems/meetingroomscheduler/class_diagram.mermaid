@@ -1,0 +1,106 @@
+classDiagram
+    class Amenity {
+        <<enumeration>>
+        PROJECTOR
+        WHITEBOARD
+        VIDEO_CONFERENCING
+        CONFERENCE_PHONE
+    }
+
+    class User {
+        -String id
+        -String name
+        -String email
+    }
+
+    class Room {
+        -String id
+        -String name
+        -int capacity
+        -int floor
+        -Set~Amenity~ amenities
+        -Map~LocalDate, BitSet~ schedule
+        +isSlotAvailable(date, startSlot, endSlot) boolean
+        +bookSlot(date, startSlot, endSlot) boolean
+        +freeSlot(date, startSlot, endSlot) void
+    }
+
+    class Booking {
+        -String id
+        -Room room
+        -User user
+        -LocalDate date
+        -int startSlot
+        -int endSlot
+    }
+
+    class RoomFilter {
+        <<interface>>
+        +filter(rooms, criteria) List~Room~
+    }
+
+    class CapacityFilter {
+        +filter(rooms, criteria) List~Room~
+    }
+
+    class FloorFilter {
+        +filter(rooms, criteria) List~Room~
+    }
+
+    class AmenityFilter {
+        +filter(rooms, criteria) List~Room~
+    }
+
+    class AvailabilityFilter {
+        +filter(rooms, criteria) List~Room~
+    }
+
+    class UserRepository {
+        -Map~String, User~ users
+        +save(user) void
+        +saveIfEmailAbsent(user) boolean
+        +getById(userId) User
+    }
+
+    class RoomRepository {
+        -Map~String, Room~ rooms
+        +save(room) void
+        +getById(roomId) Room
+        +getAll() List~Room~
+    }
+
+    class BookingRepository {
+        -List~Booking~ bookings
+        +save(booking) void
+        +findByUser(userId) List~Booking~
+        +findByRoomAndDate(roomId, date) List~Booking~
+        +getById(bookingId) Booking
+        +remove(bookingId) void
+    }
+
+    class MeetingSchedulerFacade {
+        -UserRepository userRepo
+        -RoomRepository roomRepo
+        -BookingRepository bookingRepo
+        +registerUser(name, email) User
+        +addRoom(name, capacity, floor, amenities) Room
+        +searchRooms(date, startSlot, endSlot, minCapacity, floor, amenities) List~Room~
+        +bookRoom(roomId, userId, date, startSlot, endSlot) Booking
+        +cancelBooking(bookingId) void
+        +getUpcomingBookings(userId) List~Booking~
+        +getRoomSchedule(roomId, date) String
+    }
+
+    RoomFilter <|.. CapacityFilter : implements
+    RoomFilter <|.. FloorFilter : implements
+    RoomFilter <|.. AmenityFilter : implements
+    RoomFilter <|.. AvailabilityFilter : implements
+
+    MeetingSchedulerFacade --> RoomFilter : uses
+    MeetingSchedulerFacade --> UserRepository : uses
+    MeetingSchedulerFacade --> RoomRepository : uses
+    MeetingSchedulerFacade --> BookingRepository : uses
+
+    Room "1" *-- "many" Amenity : owns
+    Booking --> Room : reserves
+    Booking --> User : booked by

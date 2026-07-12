@@ -34,3 +34,6 @@
 
 # testing
 - Do not write JUnit test files; instead create comprehensive demo main methods with clear scenario headers, inputs, expected effects, and actual outputs for manual verification. Confidence: 0.75
+
+# code-quality
+- Prefer wrapping related primitives into a value object class (record or class) rather than passing around separate primitive fields — e.g., use `TimeSlot` record instead of separate `startSlot`/`endSlot` integers. Confidence: 0.65
