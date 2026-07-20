@@ -7,10 +7,10 @@ import java.util.List;
 public class FloorFilter implements RoomFilter {
     @Override
     public List<Room> filter(List<Room> rooms, SearchCriteria criteria) {
-        if (!criteria.floorSpecified()) {
+        if (criteria.floor().isEmpty()) {
             return rooms;
         }
-        int floor = criteria.floor();
+        int floor = criteria.floor().get();
         return rooms.stream()
             .filter(room -> room.getFloor() == floor)
             .toList();

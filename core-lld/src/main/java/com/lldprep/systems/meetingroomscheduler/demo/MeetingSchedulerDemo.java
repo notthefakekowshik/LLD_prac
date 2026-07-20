@@ -10,6 +10,7 @@ import com.lldprep.systems.meetingroomscheduler.service.MeetingSchedulerFacade;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -135,7 +136,7 @@ public class MeetingSchedulerDemo {
         LocalDate date = today.plusDays(1);
         TimeSlot slot = TimeSlot.of(date, 9, 0, 60);
 
-        List<Room> results = scheduler.searchRooms(slot, 8, 1, true, Set.of(Amenity.PROJECTOR));
+        List<Room> results = scheduler.searchRooms(slot, 8, Optional.of(1), Set.of(Amenity.PROJECTOR));
 
         System.out.println("Available rooms matching criteria:");
         for (Room room : results) {
@@ -148,7 +149,7 @@ public class MeetingSchedulerDemo {
         scenario("6b. Search — any floor, cap >= 6, video conf, tomorrow 14:00-15:00");
         TimeSlot slot2 = TimeSlot.of(date, 14, 0, 60);
 
-        List<Room> results2 = scheduler.searchRooms(slot2, 6, 0, false,
+        List<Room> results2 = scheduler.searchRooms(slot2, 6, Optional.empty(),
             Set.of(Amenity.VIDEO_CONFERENCING));
 
         System.out.println("Available rooms:");

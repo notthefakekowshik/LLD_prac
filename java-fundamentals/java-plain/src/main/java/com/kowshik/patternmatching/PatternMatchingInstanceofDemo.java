@@ -114,8 +114,8 @@ public class PatternMatchingInstanceofDemo {
     // Common when working with legacy APIs, serialized types, or mixed collections
     // ─────────────────────────────────────────────────────────────────────
 
-    sealed interface JsonNode permits JsonNode.JsonString, JsonNode.JsonNumber,
-                                      JsonNode.JsonBoolean, JsonNode.JsonNull {}
+    sealed interface JsonNode permits JsonString, JsonNumber,
+                                      JsonBoolean, JsonNull {}
     record JsonString(String value)   implements JsonNode {}
     record JsonNumber(double value)   implements JsonNode {}
     record JsonBoolean(boolean value) implements JsonNode {}

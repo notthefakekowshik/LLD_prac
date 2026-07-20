@@ -24,6 +24,7 @@ import com.lldprep.systems.meetingroomscheduler.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public class MeetingSchedulerFacade {
@@ -38,23 +39,9 @@ public class MeetingSchedulerFacade {
         this.userRepository = new UserRepository();
         this.roomRepository = new RoomRepository();
         this.bookingRepository = new BookingRepository();
-        this.filters = new ArrayList<>();
-        this.filters.add(new CapacityFilter());
-        this.filters.add(new FloorFilter());
-        this.filters.add(new AmenityFilter());
-        this.filters.add(new AvailabilityFilter());
-    }
-
-    public MeetingSchedulerFacade(UserRepository userRepository, RoomRepository roomRepository,
-                                   BookingRepository bookingRepository) {
-        this.userRepository = userRepository;
-        this.roomRepository = roomRepository;
-        this.bookingRepository = bookingRepository;
-        this.filters = new ArrayList<>();
-        this.filters.add(new CapacityFilter());
-        this.filters.add(new FloorFilter());
-        this.filters.add(new AmenityFilter());
-        this.filters.add(new AvailabilityFilter());
+        // Order matters only for early-exit efficiency: cheap field checks before availability.
+        this.filters = List.of(new CapacityFilter(), new FloorFilter(),
+            new AmenityFilter(), new AvailabilityFilter());
     }
 
     public User registerUser(String name, String email) {
@@ -74,13 +61,12 @@ public class MeetingSchedulerFacade {
         return room;
     }
 
-    public List<Room> searchRooms(TimeSlot timeSlot, int minCapacity, int floor,
-                                   boolean floorSpecified, Set<Amenity> requiredAmenities) {
+    public List<Room> searchRooms(TimeSlot timeSlot, int minCapacity,
+                                   Optional<Integer> floor, Set<Amenity> requiredAmenities) {
         if (minCapacity < 1) {
             throw new InvalidBookingException("Minimum capacity must be at least 1, got: " + minCapacity);
         }
-        SearchCriteria criteria = SearchCriteria.forAvailability(
-            timeSlot, minCapacity, floor, floorSpecified, requiredAmenities);
+        SearchCriteria criteria = new SearchCriteria(timeSlot, minCapacity, floor, requiredAmenities);
 
         List<Room> rooms = new ArrayList<>(roomRepository.getAll());
         for (RoomFilter filter : filters) {

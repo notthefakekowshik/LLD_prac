@@ -3,20 +3,15 @@ package com.lldprep.systems.meetingroomscheduler.policy;
 import com.lldprep.systems.meetingroomscheduler.model.Amenity;
 import com.lldprep.systems.meetingroomscheduler.model.TimeSlot;
 
+import java.util.Optional;
 import java.util.Set;
 
+/** A search query. {@code floor} empty = any floor; empty amenities = no amenity constraint. */
 public record SearchCriteria(TimeSlot timeSlot, int minCapacity,
-                             int floor, Set<Amenity> requiredAmenities, boolean floorSpecified) {
+                             Optional<Integer> floor, Set<Amenity> requiredAmenities) {
 
     public SearchCriteria {
-        if (requiredAmenities != null) {
-            requiredAmenities = Set.copyOf(requiredAmenities);
-        }
-    }
-
-    public static SearchCriteria forAvailability(TimeSlot timeSlot, int minCapacity,
-                                                  int floor, boolean floorSpecified,
-                                                  Set<Amenity> requiredAmenities) {
-        return new SearchCriteria(timeSlot, minCapacity, floor, requiredAmenities, floorSpecified);
+        floor = floor == null ? Optional.empty() : floor;
+        requiredAmenities = requiredAmenities == null ? Set.of() : Set.copyOf(requiredAmenities);
     }
 }

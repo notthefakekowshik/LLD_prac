@@ -7,7 +7,7 @@ import java.util.List;
 public class AmenityFilter implements RoomFilter {
     @Override
     public List<Room> filter(List<Room> rooms, SearchCriteria criteria) {
-        if (criteria.requiredAmenities() == null || criteria.requiredAmenities().isEmpty()) {
+        if (criteria.requiredAmenities().isEmpty()) {
             return rooms;
         }
         return rooms.stream()

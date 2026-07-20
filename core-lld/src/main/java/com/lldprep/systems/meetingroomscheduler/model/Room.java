@@ -28,7 +28,9 @@ public class Room {
 
     public synchronized boolean isSlotAvailable(TimeSlot slot) {
         BitSet dayBits = schedule.get(slot.date());
-        if (dayBits == null) return true;
+        if (dayBits == null) {
+            return true;
+        }
         int firstSet = dayBits.nextSetBit(slot.startSlot());
         return firstSet == -1 || firstSet >= slot.endSlot();
     }

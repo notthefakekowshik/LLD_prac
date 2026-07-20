@@ -33,8 +33,13 @@ public class RecordsDemo {
             this.y = y;
         }
 
-        int x() { return x; }
-        int y() { return y; }
+        int x() {
+            return x;
+        }
+
+        int y() {
+            return y;
+        }
 
         @Override
         public boolean equals(Object o) {
@@ -59,7 +64,9 @@ public class RecordsDemo {
     // THE RECORD WAY — same semantics, 1 line
     // Compiler auto-generates: constructor, accessors, equals, hashCode, toString
     // ─────────────────────────────────────────────
-    record Point(int x, int y) {}
+    record Point(int x, int y) {
+
+    }
 
     // ─────────────────────────────────────────────
     // RECORDS WITH CUSTOM VALIDATION — compact constructor
@@ -78,8 +85,12 @@ public class RecordsDemo {
     // ─────────────────────────────────────────────
     record Money(double amount, String currency) {
         Money {
-            if (amount < 0) throw new IllegalArgumentException("Amount cannot be negative");
-            if (currency == null || currency.isBlank()) throw new IllegalArgumentException("Currency required");
+            if (amount < 0) {
+                throw new IllegalArgumentException("Amount cannot be negative");
+            }
+            if (currency == null || currency.isBlank()) {
+                throw new IllegalArgumentException("Currency required");
+            }
         }
 
         // Custom instance method — perfectly valid
@@ -99,10 +110,12 @@ public class RecordsDemo {
     // ─────────────────────────────────────────────
     // RECORDS AS DTOs — typical real-world use: API response / request objects
     // ─────────────────────────────────────────────
-    record UserResponse(long id, String name, String email) {}
+    record UserResponse(long id, String name, String email) {
+
+    }
 
     record OrderLine(String productId, int quantity, double unitPrice) {
-        double totalPrice() {
+        public double totalPrice() {
             return quantity * unitPrice;
         }
     }
